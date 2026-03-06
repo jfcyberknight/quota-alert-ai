@@ -13,7 +13,9 @@ Cet agent est le moteur de code. Il prend les spécifications et le design pour 
 - **Intégration Firebase** : Configure Firestore, Auth et les fonctions cloud si nécessaire.
 - **Gestion d'État** : Implémente la gestion d'état (Context API, Redux ou simple React state).
 
-## 💻 Protocole de Développement
+## 📋 Instructions de Développement
+- **Priorité CLI** : Utiliser systématiquement les outils en ligne de commande (`gh`, `firebase`, `vercel`) pour les interactions avec l'infrastructure.
+- Écrire un code modulaire et testable.
 
 1. **Lecture des Specs** :
    - Analyser `specifications.md` et le design système dans `index.css`.

@@ -8,7 +8,7 @@ Cet agent s'occupe de l'aspect Backend Serverless et de l'hébergement sur Verce
 
 // turbo-all
 
-## 🛠️ Capacités
+## 🛠️ Capacités (Priorité CLI Vercel)
 - **Lien de Projet** : Lie le local au projet Vercel (`vercel link`).
 - **Structure Backend** : Initialise le dossier `api/` et les fonctions de base.
 - **Déploiement** : Pousse le code en environnement de staging ou production (`vercel deploy`).

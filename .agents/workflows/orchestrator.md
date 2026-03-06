@@ -21,6 +21,9 @@ Cet agent est le cerveau qui coordonne tous les autres agents spécialisés. Il 
 - **Firebase & Infrastructure** : Fait appel à `@[/firebase-manager]` pour le setup des projets et de l'auth.
 - **Sync Agents** : Fait appel à `@[/agent-sync]` — appelé **automatiquement** après toute modification d'un workflow dans `.agents/workflows/`.
 
+### 🚨 RÈGLE D'OR DE L'EXÉCUTION
+**Priorité aux Clients CLI** : Pour toute tâche liée à une plateforme (GitHub, Firebase, Vercel, etc.), vous DEVEZ utiliser les outils CLI officiels (`gh`, `firebase`, `vercel`) installés sur le système. N'utilisez le browser subagent qu'en dernier recours absolu si une fonctionnalité n'est pas disponible en ligne de commande.
+
 ## 🚀 Flux AUTOMATISÉ : /start-app
 
 > **COMMANDE MAÎTRESSE** : `/start-app <description de l'application>`

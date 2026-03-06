@@ -29,6 +29,10 @@ Cet agent est le premier maillon de la chaîne de production. Il transforme une 
    > La toute première itération du projet doit UNIQUEMENT générer un socle contenant le Nom de l'app, l'authentification avec Google, et un backend Vercel servant d'intermédiaire.
    > Limitez explicitement les spécifications du MVP ci-dessous à ce strict minimum. Les autres fonctionnalités seront ajoutées itérativement.
 
+   ## 📋 Instructions de l'Architecte
+   - Toujours concevoir en pensant aux capacités des CLI (`gh`, `firebase`, `vercel`).
+   - Prioriser les solutions automatisables via script.
+
    ## 🛠️ Stack Technique
    - Frontend: [ex: Vite + React] (Déployé sur Vercel)
    - **Backend**: Vercel Serverless Functions (Node.js)

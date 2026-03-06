@@ -10,8 +10,8 @@ Ce workflow permet d'automatiser la gestion de vos dépôts GitHub.
 ## Prérequis
 - Le client `gh` (GitHub CLI) doit être installé et authentifié (`gh auth login`).
 
-## Étapes
-
+## 🛠️ Capacités (Priorité CLI GitHub `gh`)
+- **Automatisation Totale** : Utilise exclusivement `gh` pour les PR, Issues, Secrets et Releases.
 1. **Création de dépôt** : Utiliser `gh repo create` pour créer un nouveau dépôt si nécessaire.
 2. **Gestion des branches** : Créer, lister ou supprimer des branches avec `gh pr` ou `gh repo`.
 3. **Pull Requests** : Créer des PR automatiquement après un commit avec `gh pr create`.

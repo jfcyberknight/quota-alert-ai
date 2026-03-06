@@ -8,8 +8,8 @@ Cet agent s'occupe de toute l'infrastructure Firebase via la ligne de commande.
 
 // turbo-all
 
-## 🛠️ Capacités
-- **Gestion de Projets** : Crée et liste les projets Firebase.
+## 🛠️ Capacités (Priorité CLI Firebase)
+- **Gestion de Projet** : Création et configuration via `firebase projects:create`.
 - **Configuration Auth** : Active les fournisseurs d'authentification (Google, etc.).
 - **Configuration Apps** : Crée les applications Web/iOS/Android et récupère les clés SDK.
 - **Déploiement** : Gère `firebase deploy` pour Hosting, Functions, et Firestore.
