@@ -37,3 +37,29 @@ Cet agent s'occupe de toute l'infrastructure Firebase via la ligne de commande.
 - Le projet Firebase est actif.
 - Les clés SDK sont correctement intégrées à l'application.
 - L'authentification est prête pour les tests.
+
+## 🚨 RÈGLES CI/CD OBLIGATOIRES (ne jamais oublier)
+
+### 1. Créer `firebase.json` avant tout déploiement
+Firebase Hosting ne peut pas déployer sans ce fichier à la racine du projet.
+```json
+{
+  "hosting": {
+    "public": "dist",
+    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+    "rewrites": [{ "source": "**", "destination": "/index.html" }]
+  }
+}
+```
+
+### 2. Inclure `npm run build` dans le workflow GitHub Actions
+Le dossier `dist/` doit exister avant le déploiement Firebase. **Toujours** ajouter cette étape dans `.github/workflows/deploy.yml` :
+```yaml
+- name: Build
+  run: npm run build
+```
+
+### 3. Configurer les secrets GitHub AVANT le premier push
+Ne jamais pousser le workflow sans avoir d'abord configuré tous les secrets requis :
+- `FIREBASE_SERVICE_ACCOUNT_<PROJECT_ID>` (voir section GitHub Manager)
+- `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`

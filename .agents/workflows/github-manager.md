@@ -19,5 +19,28 @@ Ce workflow permet d'automatiser la gestion de vos dépôts GitHub.
 5. **Synchronisation & Sécurité** : Pousser les changements vers le dépôt distant.
    - **RÈGLE CRITIQUE** : Avant tout push vers `main` ou `production`, confirmer avec l'Orchestrateur que les tests de vérification (notamment Auth) sont passés avec succès.
 
+## 🚨 RÈGLES CRITIQUES
+
+### Secrets multi-lignes (ex. Firebase Service Account)
+**NE JAMAIS** passer un JSON multi-lignes directement dans `--body "..."` en PowerShell — les backslashes sont mal échappés et la clé privée sera corrompue.
+
+**TOUJOURS** utiliser la méthode par fichier :
+```powershell
+# ✅ Correct
+Get-Content "path/to/service-account.json" -Raw | gh secret set NOM_DU_SECRET --repo owner/repo
+
+# ❌ Incorrect (corrompt le JSON)
+gh secret set NOM_DU_SECRET --body '{ "private_key": "-----BEGIN ...\n..." }'
+```
+
+### Visibilité du dépôt
+- Créer les dépôts en **privé** par défaut : `gh repo create <name> --private ...`
+- Pour changer la visibilité : `gh repo edit <owner/repo> --visibility private`
+
+### Avant le premier push
+1. Créer tous les secrets GitHub requis via `gh secret set`.
+2. Vérifier que `firebase.json` existe à la racine.
+3. S'assurer que le workflow inclut `npm run build` avant les étapes de déploiement.
+
 ## Exemple de commande
-`gh repo create agents-workspace --public --source=. --remote=origin --push`
+`gh repo create agents-workspace --private --source=. --remote=origin --push`
