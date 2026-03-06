@@ -1,0 +1,17 @@
+﻿{
+  "status": "success",
+  "result": {
+    "fileName": "firebase-js-config.json",
+    "fileContents": "{\n  \"projectId\": \"quota-alert-ai-jv\",\n  \"appId\": \"1:499464237803:web:becb86cf884a6dbd8bc4ae\",\n  \"storageBucket\": \"quota-alert-ai-jv.firebasestorage.app\",\n  \"apiKey\": \"AIzaSyC2rXOHmOu79_dfBHcC-0SWgp8zWqTWCZU\",\n  \"authDomain\": \"quota-alert-ai-jv.firebaseapp.com\",\n  \"messagingSenderId\": \"499464237803\",\n  \"projectNumber\": \"499464237803\",\n  \"version\": \"2\"\n}",
+    "sdkConfig": {
+      "projectId": "quota-alert-ai-jv",
+      "appId": "1:499464237803:web:becb86cf884a6dbd8bc4ae",
+      "storageBucket": "quota-alert-ai-jv.firebasestorage.app",
+      "apiKey": "AIzaSyC2rXOHmOu79_dfBHcC-0SWgp8zWqTWCZU",
+      "authDomain": "quota-alert-ai-jv.firebaseapp.com",
+      "messagingSenderId": "499464237803",
+      "projectNumber": "499464237803",
+      "version": "2"
+    }
+  }
+}
