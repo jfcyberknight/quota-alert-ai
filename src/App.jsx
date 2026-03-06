@@ -1,3 +1,4 @@
+// Initial deployment with CI/CD
 import React, { useState, useEffect } from 'react';
 import Layout from './components/Layout';
 import Navbar from './components/Navbar';
