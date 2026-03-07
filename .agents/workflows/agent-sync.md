@@ -9,7 +9,7 @@ Cet agent maintient la cohérence entre les workflows du projet courant et le d�
 
 ## 📁 Chemins
 - **Source** : `.agents/workflows/` (dans le repo du projet courant)
-- **Destination** : `C:\Users\jf.vallee\.gemini\antigravity\scratch\agent-manager\`
+- **Destination** : `C:\Users\lapet\github-all\agent-manager-1\`
 
 ## ⚡ Déclenchement
 Cet agent est appelé **automatiquement par l'orchestrateur** après toute modification d'un fichier dans `.agents/workflows/`.
@@ -17,18 +17,18 @@ Il n'a jamais besoin d'être invoqué manuellement.
 
 ## 🛠️ Étapes
 
-1. **Copier les fichiers modifiés** vers agent-manager :
-   ```powershell
-   Copy-Item ".agents\workflows\*.md" -Destination "C:\Users\jf.vallee\.gemini\antigravity\scratch\agent-manager\" -Force
+1. **Copier les fichiers modifiés** vers agent-manager-1 :
+   ```bash
+   cp .agents/workflows/*.md "/c/Users/lapet/github-all/agent-manager-1/"
    ```
 
-2. **Commit et push** dans agent-manager :
-   ```powershell
-   cd "C:\Users\jf.vallee\.gemini\antigravity\scratch\agent-manager"
+2. **Commit et push** dans agent-manager-1 :
+   ```bash
+   cd "/c/Users/lapet/github-all/agent-manager-1"
    git add -A
    git diff --cached --quiet || git commit -m "sync(agents): update workflows from <nom-projet>"
-   git pull --rebase origin main
-   git push origin main
+   git pull --rebase origin master
+   git push origin master
    ```
 
 3. **Retour** au répertoire du projet courant.

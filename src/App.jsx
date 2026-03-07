@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, Link } from 'react-router-dom';
 import Layout from './components/Layout';
 import Navbar from './components/Navbar';
 import AdminPage from './pages/AdminPage';
@@ -79,12 +79,19 @@ function Dashboard({ user }) {
           </div>
         ))}
       </div>
-      <button style={{
-        padding: '0.6rem 1.4rem', background: 'linear-gradient(135deg, #7c3aed, #2563eb)',
-        color: 'white', border: 'none', borderRadius: '8px', fontWeight: '600', fontSize: '0.9rem', cursor: 'pointer',
+      <div style={{
+        padding: '1.5rem', background: 'rgba(167,139,250,0.05)',
+        border: '1px solid rgba(167,139,250,0.15)', borderRadius: '12px',
       }}>
-        + Ajouter une API Key
-      </button>
+        <h2 style={{ fontSize: '1rem', fontWeight: 600, margin: '0 0 0.75rem', color: '#c4b5fd' }}>
+          🚀 Commencer
+        </h2>
+        <ol style={{ margin: 0, paddingLeft: '1.25rem', color: '#666', fontSize: '0.875rem', lineHeight: 2 }}>
+          <li>Allez dans <Link to="/admin" style={{ color: '#a78bfa', textDecoration: 'none', fontWeight: 500 }}>Admin → API Keys</Link> pour ajouter vos clés</li>
+          <li>Vos quotas s'afficheront ici automatiquement</li>
+          <li>Configurez des alertes pour être notifié avant d'atteindre vos limites</li>
+        </ol>
+      </div>
     </div>
   );
 }
