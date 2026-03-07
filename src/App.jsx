@@ -213,19 +213,21 @@ function Dashboard({ user }) {
 
   async function fetchQuotas(keys) {
     for (const key of keys) {
-      setLoadingQuotas(prev => ({ ...prev, [key.provider]: true }));
+      // Normalize to display name (e.g. 'openai' → 'OpenAI')
+      const providerName = providers.find(p => p.name.toLowerCase() === key.provider.toLowerCase())?.name || key.provider;
+      setLoadingQuotas(prev => ({ ...prev, [providerName]: true }));
       try {
         const res = await fetch('/api/quotas', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ provider: key.provider, apiKey: key.value }),
+          body: JSON.stringify({ provider: providerName, apiKey: key.value }),
         });
         const data = await res.json();
-        setQuotas(prev => ({ ...prev, [key.provider]: data }));
+        setQuotas(prev => ({ ...prev, [providerName]: data }));
       } catch {
-        setQuotas(prev => ({ ...prev, [key.provider]: { error: 'Impossible de contacter l\'API' } }));
+        setQuotas(prev => ({ ...prev, [providerName]: { error: 'Impossible de contacter l\'API' } }));
       } finally {
-        setLoadingQuotas(prev => ({ ...prev, [key.provider]: false }));
+        setLoadingQuotas(prev => ({ ...prev, [providerName]: false }));
       }
     }
   }
