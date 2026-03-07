@@ -28,6 +28,9 @@ jobs:
           test -f firebase.json || (echo "ERROR: firebase.json is missing - Firebase deploy aborted." && exit 1)
 
       - name: Deploy to Firebase Hosting
-        run: |
-          echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT_QUOTA_ALERT_AI_JV }}' > /tmp/sa.json
-          GOOGLE_APPLICATION_CREDENTIALS=/tmp/sa.json ./node_modules/.bin/firebase deploy --only hosting --project quota-alert-ai-jv
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_QUOTA_ALERT_AI_JV }}
+          projectId: quota-alert-ai-jv
+          channelId: live

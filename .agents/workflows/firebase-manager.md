@@ -69,19 +69,17 @@ Ne jamais pousser le workflow sans avoir d'abord configuré tous les secrets req
 ### 4. 🚨 Authentification Firebase CLI en CI (RÈGLE CRITIQUE)
 La CLI Firebase attend `GOOGLE_APPLICATION_CREDENTIALS` comme **chemin vers un fichier JSON**, jamais une variable contenant le JSON brut.
 
-**TOUJOURS** écrire le secret dans un fichier temporaire et appeler le binaire local directement :
+**TOUJOURS** utiliser l'Action officielle GitHub pour le déploiement Firebase en CI :
 ```yaml
 - name: Deploy to Firebase Hosting
-  run: |
-    echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT_<PROJECT_ID> }}' > /tmp/sa.json
-    GOOGLE_APPLICATION_CREDENTIALS=/tmp/sa.json ./node_modules/.bin/firebase deploy --only hosting --project <project-id>
+  uses: FirebaseExtended/action-hosting-deploy@v0
+  with:
+    repoToken: ${{ secrets.GITHUB_TOKEN }}
+    firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_<PROJECT_ID> }}
+    projectId: <project-id>
+    channelId: live
 ```
 
-> ⚠️ **NE PAS utiliser `npx firebase`** : si le projet a un package `firebase` (SDK) en dépendances ET `firebase-tools` en devDependencies, `npx` exécute le mauvais (`firebase` SDK n'a pas de binaire → erreur `could not determine executable to run`). Utiliser `./node_modules/.bin/firebase` à la place.
+> ⚠️ **NE PAS utiliser `firebase-tools` comme devDependency en CI** : le binaire `./node_modules/.bin/firebase` peut être absent si l'installation échoue silencieusement. `npx firebase` est ambigu quand le SDK `firebase` est aussi une dépendance. L'Action officielle gère tout ça de façon fiable.
 
-**NE JAMAIS** faire :
-```yaml
-env:
-  GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_... }}
-# ❌ Firebase CLI ne lit pas une variable JSON brute
-```
+> ⚠️ **NE PAS** passer le JSON brut via une variable d'env `GOOGLE_APPLICATION_CREDENTIALS_JSON` — Firebase CLI attend un chemin de fichier, pas du JSON inline.
