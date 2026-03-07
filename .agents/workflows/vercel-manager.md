@@ -31,9 +31,10 @@ Cet agent s'occupe de l'aspect Backend Serverless et de l'hébergement sur Verce
    - Confirmer l'endpoint : `GET /api/status`.
    - > ⚠️ **NE PAS utiliser `vercel dev`** pour le dev local : nécessite une auth interactive bloquante (`vercel login`). Utiliser `concurrently` + un mini serveur node à la place (voir `scripts/dev-api.js`).
 
-4. **Déploiement** :
-   - Exécuter `npx vercel deploy --yes` pour un déploiement rapide.
-   - Utiliser `npx vercel --prod --yes` pour la mise en production finale.
+4. **Déploiement CI** :
+   - Toujours passer le token via le flag : `npx vercel --prod --yes --token=${{ secrets.VERCEL_TOKEN }}`
+   - `VERCEL_ORG_ID` et `VERCEL_PROJECT_ID` restent en variables d'env.
+   - > ⚠️ **CLI v41+ ignore `VERCEL_TOKEN` comme variable d'env** : passer obligatoirement via `--token=`. Utiliser `env: VERCEL_TOKEN` ne fonctionne pas.
 
 ## ✅ Critères de Succès
 - Le projet est lié à Vercel.
