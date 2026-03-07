@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { collection, addDoc, getDocs, deleteDoc, doc, query, where } from 'firebase/firestore';
 import { db } from '../firebase';
 
@@ -7,6 +7,82 @@ const PROVIDERS = [
   { id: 'anthropic', label: 'Anthropic', icon: '🧠', color: '#c96442' },
   { id: 'gemini',    label: 'Gemini',    icon: '✨', color: '#4285f4' },
 ];
+
+const GUIDE = [
+  {
+    id: 'openai', label: 'OpenAI', icon: '🤖', color: '#10a37f',
+    steps: [
+      { label: 'Accéder à', link: 'https://platform.openai.com/api-keys', text: 'platform.openai.com/api-keys' },
+      { label: 'Créer une clé avec accès "All" (ou au minimum "Billing")' },
+      { label: 'Coller la clé dans le formulaire ci-dessus' },
+    ],
+    note: 'Les quotas nécessitent un compte avec facturation activée.',
+  },
+  {
+    id: 'anthropic', label: 'Anthropic', icon: '🧠', color: '#c96442',
+    steps: [
+      { label: 'Accéder à', link: 'https://console.anthropic.com/settings/keys', text: 'console.anthropic.com/settings/keys' },
+      { label: 'Créer une API Key' },
+      { label: 'Coller la clé dans le formulaire ci-dessus' },
+    ],
+    note: 'Les rate limits sont lus via les headers de l\'API.',
+  },
+  {
+    id: 'gemini', label: 'Gemini', icon: '✨', color: '#4285f4',
+    steps: [
+      { label: 'Accéder à', link: 'https://aistudio.google.com/app/apikey', text: 'aistudio.google.com/app/apikey' },
+      { label: 'Créer une clé pour le projet souhaité' },
+      { label: 'Coller la clé dans le formulaire ci-dessus' },
+    ],
+    note: 'Google n\'expose pas les quotas via l\'API publique — la clé sera validée uniquement.',
+  },
+];
+
+function GuideSection() {
+  const [open, setOpen] = useState(false);
+  return (
+    <div style={{ marginTop: '1.5rem' }}>
+      <button
+        onClick={() => setOpen(o => !o)}
+        style={{
+          display: 'flex', alignItems: 'center', gap: '0.5rem',
+          background: 'none', border: 'none', color: '#a78bfa',
+          fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer', padding: 0,
+        }}
+      >
+        <span style={{ fontSize: '0.7rem', display: 'inline-block', transition: 'transform 0.2s', transform: open ? 'rotate(90deg)' : 'rotate(0deg)' }}>▶</span>
+        Comment obtenir mes clés API ?
+      </button>
+      {open && (
+        <div style={{
+          marginTop: '1rem', display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '1rem',
+          animation: 'slideDown 0.2s ease',
+        }}>
+          {GUIDE.map(g => (
+            <div key={g.id} style={{
+              padding: '1.1rem', borderRadius: '10px',
+              border: `1px solid ${g.color}22`, background: `${g.color}08`,
+            }}>
+              <div style={{ fontWeight: 600, marginBottom: '0.6rem', color: g.color, fontSize: '0.875rem' }}>
+                {g.icon} {g.label}
+              </div>
+              <ol style={{ margin: '0 0 0.6rem', paddingLeft: '1.1rem', fontSize: '0.8rem', color: '#888', lineHeight: 1.9 }}>
+                {g.steps.map((s, i) => (
+                  <li key={i}>
+                    {s.label}{' '}
+                    {s.link && <a href={s.link} target="_blank" rel="noreferrer" style={{ color: g.color, textDecoration: 'none' }}>{s.text}</a>}
+                  </li>
+                ))}
+              </ol>
+              {g.note && <div style={{ fontSize: '0.72rem', color: '#555', fontStyle: 'italic' }}>ℹ️ {g.note}</div>}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 const STATS = [
   { label: 'Utilisateurs',     value: '1',  sub: 'inscrits',    color: '#60a5fa' },
@@ -17,13 +93,87 @@ const STATS = [
 
 const SECTIONS = ['Vue générale', 'Utilisateurs', 'API Keys', 'Alertes', 'Système'];
 
+const ANIM_STYLES = `
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes slideUp {
+  from { opacity: 1; transform: translateY(0); }
+  to   { opacity: 0; transform: translateY(-10px); }
+}
+@keyframes toastIn {
+  from { opacity: 0; transform: translateX(20px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes toastOut {
+  from { opacity: 1; transform: translateX(0); }
+  to   { opacity: 0; transform: translateX(20px); }
+}
+@keyframes rowIn {
+  from { opacity: 0; transform: translateX(-8px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+`;
+
+function Toast({ message, type = 'success', onDone }) {
+  const [leaving, setLeaving] = useState(false);
+
+  useEffect(() => {
+    const t1 = setTimeout(() => setLeaving(true), 2200);
+    const t2 = setTimeout(() => onDone(), 2600);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
+  }, []);
+
+  return (
+    <div style={{
+      position: 'fixed', bottom: '1.5rem', right: '1.5rem', zIndex: 999,
+      padding: '0.75rem 1.25rem',
+      background: type === 'success' ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)',
+      border: `1px solid ${type === 'success' ? 'rgba(34,197,94,0.35)' : 'rgba(239,68,68,0.35)'}`,
+      borderRadius: '10px', color: type === 'success' ? '#4ade80' : '#f87171',
+      fontSize: '0.875rem', fontWeight: 600,
+      backdropFilter: 'blur(8px)',
+      animation: `${leaving ? 'toastOut' : 'toastIn'} 0.3s ease forwards`,
+      display: 'flex', alignItems: 'center', gap: '0.5rem',
+    }}>
+      {type === 'success' ? '✓' : '✕'} {message}
+    </div>
+  );
+}
+
+function PressButton({ onClick, children, style, disabled, type = 'button' }) {
+  const [pressed, setPressed] = useState(false);
+  return (
+    <button
+      type={type}
+      disabled={disabled}
+      onMouseDown={() => setPressed(true)}
+      onMouseUp={() => setPressed(false)}
+      onMouseLeave={() => setPressed(false)}
+      onClick={onClick}
+      style={{
+        ...style,
+        transform: pressed && !disabled ? 'scale(0.95)' : 'scale(1)',
+        transition: 'transform 0.1s ease, opacity 0.15s ease',
+        opacity: disabled ? 0.5 : 1,
+      }}
+    >
+      {children}
+    </button>
+  );
+}
+
 function ApiKeysSection({ user }) {
   const [keys, setKeys] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [closing, setClosing] = useState(false);
   const [form, setForm] = useState({ provider: 'openai', name: '', value: '' });
   const [saving, setSaving] = useState(false);
   const [revealed, setRevealed] = useState({});
+  const [toast, setToast] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
 
   const colRef = collection(db, 'apiKeys');
 
@@ -41,6 +191,16 @@ function ApiKeysSection({ user }) {
 
   useEffect(() => { loadKeys(); }, []);
 
+  const closeForm = () => {
+    setClosing(true);
+    setTimeout(() => { setShowForm(false); setClosing(false); }, 250);
+  };
+
+  const toggleForm = () => {
+    if (showForm) closeForm();
+    else setShowForm(true);
+  };
+
   const handleAdd = async (e) => {
     e.preventDefault();
     if (!form.name.trim() || !form.value.trim()) return;
@@ -54,18 +214,26 @@ function ApiKeysSection({ user }) {
         createdAt: new Date().toISOString(),
       });
       setForm({ provider: 'openai', name: '', value: '' });
-      setShowForm(false);
+      closeForm();
       await loadKeys();
+      setToast({ message: 'Clé enregistrée avec succès', type: 'success' });
     } catch (e) {
-      alert('Erreur lors de la sauvegarde: ' + e.message);
+      setToast({ message: 'Erreur : ' + e.message, type: 'error' });
     }
     setSaving(false);
   };
 
   const handleDelete = async (id) => {
     if (!confirm('Supprimer cette clé ?')) return;
-    await deleteDoc(doc(db, 'apiKeys', id));
-    setKeys(k => k.filter(x => x.id !== id));
+    setDeletingId(id);
+    try {
+      await deleteDoc(doc(db, 'apiKeys', id));
+      setKeys(k => k.filter(x => x.id !== id));
+      setToast({ message: 'Clé supprimée', type: 'success' });
+    } catch (e) {
+      setToast({ message: 'Erreur suppression', type: 'error' });
+    }
+    setDeletingId(null);
   };
 
   const provider = (id) => PROVIDERS.find(p => p.id === id) || PROVIDERS[0];
@@ -73,19 +241,24 @@ function ApiKeysSection({ user }) {
 
   return (
     <div>
+      <style>{ANIM_STYLES}</style>
+
+      {toast && <Toast key={toast.message + Date.now()} message={toast.message} type={toast.type} onDone={() => setToast(null)} />}
+
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
         <span style={{ fontSize: '0.875rem', color: '#555' }}>{keys.length} clé{keys.length !== 1 ? 's' : ''} enregistrée{keys.length !== 1 ? 's' : ''}</span>
-        <button
-          onClick={() => setShowForm(v => !v)}
+        <PressButton
+          onClick={toggleForm}
           style={{
             padding: '0.5rem 1.1rem',
-            background: 'linear-gradient(135deg, #7c3aed, #2563eb)',
-            color: 'white', border: 'none', borderRadius: '7px',
-            fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer',
+            background: showForm ? 'rgba(239,68,68,0.12)' : 'linear-gradient(135deg, #7c3aed, #2563eb)',
+            color: showForm ? '#f87171' : 'white',
+            border: showForm ? '1px solid rgba(239,68,68,0.25)' : 'none',
+            borderRadius: '7px', fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer',
           }}
         >
           {showForm ? '✕ Annuler' : '+ Ajouter une clé'}
-        </button>
+        </PressButton>
       </div>
 
       {showForm && (
@@ -97,6 +270,7 @@ function ApiKeysSection({ user }) {
           marginBottom: '1.25rem',
           display: 'grid',
           gap: '1rem',
+          animation: `${closing ? 'slideUp' : 'slideDown'} 0.25s ease forwards`,
         }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
             <div>
@@ -109,8 +283,7 @@ function ApiKeysSection({ user }) {
                 style={{
                   width: '100%', padding: '0.55rem 0.85rem',
                   background: '#1a1a22', border: '1px solid rgba(255,255,255,0.1)',
-                  borderRadius: '7px', color: '#e2e2e2', fontSize: '0.875rem',
-                  cursor: 'pointer',
+                  borderRadius: '7px', color: '#e2e2e2', fontSize: '0.875rem', cursor: 'pointer',
                 }}
               >
                 {PROVIDERS.map(p => (
@@ -148,24 +321,23 @@ function ApiKeysSection({ user }) {
               style={{
                 width: '100%', padding: '0.55rem 0.85rem',
                 background: '#1a1a22', border: '1px solid rgba(255,255,255,0.1)',
-                borderRadius: '7px', color: '#e2e2e2', fontSize: '0.875rem',
-                fontFamily: 'monospace',
+                borderRadius: '7px', color: '#e2e2e2', fontSize: '0.875rem', fontFamily: 'monospace',
               }}
             />
           </div>
           <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <button
+            <PressButton
               type="submit"
               disabled={saving}
               style={{
                 padding: '0.55rem 1.4rem',
-                background: saving ? '#333' : 'linear-gradient(135deg, #7c3aed, #2563eb)',
+                background: saving ? 'rgba(124,58,237,0.4)' : 'linear-gradient(135deg, #7c3aed, #2563eb)',
                 color: 'white', border: 'none', borderRadius: '7px',
                 fontWeight: 600, fontSize: '0.875rem', cursor: saving ? 'not-allowed' : 'pointer',
               }}
             >
-              {saving ? 'Sauvegarde...' : 'Enregistrer'}
-            </button>
+              {saving ? '⏳ Sauvegarde...' : 'Enregistrer'}
+            </PressButton>
           </div>
         </form>
       )}
@@ -200,10 +372,15 @@ function ApiKeysSection({ user }) {
               </tr>
             </thead>
             <tbody>
-              {keys.map(k => {
+              {keys.map((k, i) => {
                 const p = provider(k.provider);
                 return (
-                  <tr key={k.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                  <tr key={k.id} style={{
+                    borderBottom: '1px solid rgba(255,255,255,0.04)',
+                    animation: `rowIn 0.2s ease ${i * 0.04}s both`,
+                    opacity: deletingId === k.id ? 0.4 : 1,
+                    transition: 'opacity 0.2s ease',
+                  }}>
                     <td style={{ padding: '0.85rem 1.25rem' }}>
                       <span style={{
                         fontSize: '0.8rem', fontWeight: 600,
@@ -216,7 +393,7 @@ function ApiKeysSection({ user }) {
                     <td style={{ padding: '0.85rem 1.25rem', color: '#ccc' }}>{k.name}</td>
                     <td style={{ padding: '0.85rem 1.25rem', fontFamily: 'monospace', fontSize: '0.8rem', color: '#666' }}>
                       <span>{revealed[k.id] ? k.value : mask(k.value)}</span>
-                      <button
+                      <PressButton
                         onClick={() => setRevealed(r => ({ ...r, [k.id]: !r[k.id] }))}
                         style={{
                           marginLeft: '0.6rem', padding: '0.1rem 0.5rem',
@@ -225,14 +402,15 @@ function ApiKeysSection({ user }) {
                         }}
                       >
                         {revealed[k.id] ? 'masquer' : 'voir'}
-                      </button>
+                      </PressButton>
                     </td>
                     <td style={{ padding: '0.85rem 1.25rem', color: '#555', fontSize: '0.8rem' }}>
                       {k.createdAt?.slice(0, 10)}
                     </td>
                     <td style={{ padding: '0.85rem 1.25rem' }}>
-                      <button
+                      <PressButton
                         onClick={() => handleDelete(k.id)}
+                        disabled={deletingId === k.id}
                         style={{
                           padding: '0.3rem 0.7rem',
                           background: 'rgba(239,68,68,0.1)', color: '#f87171',
@@ -240,8 +418,8 @@ function ApiKeysSection({ user }) {
                           borderRadius: 5, fontSize: '0.78rem', cursor: 'pointer',
                         }}
                       >
-                        Supprimer
-                      </button>
+                        {deletingId === k.id ? '...' : 'Supprimer'}
+                      </PressButton>
                     </td>
                   </tr>
                 );
@@ -250,6 +428,8 @@ function ApiKeysSection({ user }) {
           </table>
         </div>
       )}
+
+      <GuideSection />
     </div>
   );
 }
@@ -278,6 +458,7 @@ export default function AdminPage({ user }) {
             borderLeft: section === s ? '2px solid #a78bfa' : '2px solid transparent',
             fontSize: '0.875rem', cursor: 'pointer',
             fontWeight: section === s ? 600 : 400,
+            transition: 'color 0.15s ease, background 0.15s ease',
           }}>{s}</button>
         ))}
       </aside>

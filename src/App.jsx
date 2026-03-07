@@ -6,6 +6,7 @@ import AdminPage from './pages/AdminPage';
 import { auth, loginWithGoogle, logout, db } from './firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { collection, query, where, getDocs } from 'firebase/firestore';
+import { usePushNotifications } from './hooks/usePushNotifications';
 
 const providers = [
   { name: 'OpenAI', icon: '🤖', color: '#10a37f' },
@@ -229,15 +230,41 @@ function Dashboard({ user }) {
     }
   }
 
+  const { status: pushStatus, subscribe, unsubscribe } = usePushNotifications(user);
   const configuredProviders = new Set(keys.map(k => k.provider));
 
   return (
     <div style={{ padding: '2.5rem 2rem', maxWidth: 960, margin: '0 auto' }}>
-      <div style={{ marginBottom: '2rem' }}>
-        <h1 style={{ fontSize: '1.8rem', fontWeight: 700, margin: '0 0 0.25rem' }}>Tableau de bord</h1>
-        <p style={{ color: '#666', margin: 0, fontSize: '0.9rem' }}>
-          Bienvenue, {user.displayName?.split(' ')[0] || 'utilisateur'}
-        </p>
+      <div style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div>
+          <h1 style={{ fontSize: '1.8rem', fontWeight: 700, margin: '0 0 0.25rem' }}>Tableau de bord</h1>
+          <p style={{ color: '#666', margin: 0, fontSize: '0.9rem' }}>
+            Bienvenue, {user.displayName?.split(' ')[0] || 'utilisateur'}
+          </p>
+        </div>
+        {pushStatus !== 'unsupported' && (
+          <button
+            onClick={pushStatus === 'granted' ? unsubscribe : subscribe}
+            disabled={pushStatus === 'loading' || pushStatus === 'denied'}
+            style={{
+              padding: '0.45rem 1rem', borderRadius: '8px', fontSize: '0.82rem',
+              fontWeight: 600, cursor: pushStatus === 'denied' ? 'not-allowed' : 'pointer',
+              border: '1px solid',
+              ...(pushStatus === 'granted'
+                ? { background: 'rgba(34,197,94,0.1)', color: '#4ade80', borderColor: 'rgba(34,197,94,0.25)' }
+                : pushStatus === 'denied'
+                ? { background: 'rgba(239,68,68,0.08)', color: '#666', borderColor: 'rgba(239,68,68,0.15)' }
+                : { background: 'rgba(167,139,250,0.1)', color: '#a78bfa', borderColor: 'rgba(167,139,250,0.25)' }
+              ),
+              transition: 'transform 0.1s ease',
+            }}
+          >
+            {pushStatus === 'granted' && '🔔 Alertes activées'}
+            {pushStatus === 'idle' && '🔕 Activer les alertes'}
+            {pushStatus === 'loading' && '⏳ En cours...'}
+            {pushStatus === 'denied' && '🚫 Notifications bloquées'}
+          </button>
+        )}
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
