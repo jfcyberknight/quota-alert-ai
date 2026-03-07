@@ -37,6 +37,12 @@ jobs:
         run: |
           test -f firebase.json || (echo "ERROR: firebase.json is missing - Firebase deploy aborted." && exit 1)
 
+      - name: Deploy Firestore rules
+        run: |
+          echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT_QUOTA_ALERT_AI_JV }}' > /tmp/sa.json
+          GOOGLE_APPLICATION_CREDENTIALS=/tmp/sa.json npx firebase deploy --only firestore:rules --project quota-alert-ai-jv --non-interactive
+          rm /tmp/sa.json
+
       - name: Deploy to Firebase Hosting
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
