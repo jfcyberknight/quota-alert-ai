@@ -8,21 +8,23 @@ Cet agent s'occupe de toute l'infrastructure Firebase via la ligne de commande.
 
 // turbo-all
 
+> **Prérequis** : `firebase-tools` est une devDependency — un simple `npm install` suffit. Utiliser `npx firebase` (pas besoin d'installation globale).
+
 ## 🛠️ Capacités (Priorité CLI Firebase)
-- **Gestion de Projet** : Création et configuration via `firebase projects:create`.
+- **Gestion de Projet** : Création et configuration via `npx firebase projects:create`.
 - **Configuration Auth** : Active les fournisseurs d'authentification (Google, etc.).
 - **Configuration Apps** : Crée les applications Web/iOS/Android et récupère les clés SDK.
-- **Déploiement** : Gère `firebase deploy` pour Hosting, Functions, et Firestore.
+- **Déploiement** : Gère `npx firebase deploy` pour Hosting, Functions, et Firestore.
 
 ## 💻 Protocole de Configuration
 
 1. **Création du Projet** :
-   - Vérifier si le projet existe : `firebase projects:list`.
-   - Créer le projet si nécessaire : `firebase projects:create <project-id> --display-name "<name>"`.
+   - Vérifier si le projet existe : `npx firebase projects:list`.
+   - Créer le projet si nécessaire : `npx firebase projects:create <project-id> --display-name "<name>"`.
 
 2. **Configuration de l'Application Web** :
-   - Créer l'app : `firebase apps:create WEB <app-name> --project <project-id>`.
-   - Récupérer la config : `firebase apps:sdkconfig WEB --project <project-id>`.
+   - Créer l'app : `npx firebase apps:create WEB <app-name> --project <project-id>`.
+   - Récupérer la config : `npx firebase apps:sdkconfig WEB --project <project-id>`.
    - **IMPORTANCE CRITIQUE** : Sauvegarder la config dans `.env.local` et s'assurer que `apiKey` est présente.
 
 3. **Activation de l'Authentification (OBLIGATOIRE)** :
@@ -63,3 +65,23 @@ Le dossier `dist/` doit exister avant le déploiement Firebase. **Toujours** ajo
 Ne jamais pousser le workflow sans avoir d'abord configuré tous les secrets requis :
 - `FIREBASE_SERVICE_ACCOUNT_<PROJECT_ID>` (voir section GitHub Manager)
 - `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`
+
+### 4. 🚨 Authentification Firebase CLI en CI (RÈGLE CRITIQUE)
+La CLI Firebase attend `GOOGLE_APPLICATION_CREDENTIALS` comme **chemin vers un fichier JSON**, jamais une variable contenant le JSON brut.
+
+**TOUJOURS** écrire le secret dans un fichier temporaire et appeler le binaire local directement :
+```yaml
+- name: Deploy to Firebase Hosting
+  run: |
+    echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT_<PROJECT_ID> }}' > /tmp/sa.json
+    GOOGLE_APPLICATION_CREDENTIALS=/tmp/sa.json ./node_modules/.bin/firebase deploy --only hosting --project <project-id>
+```
+
+> ⚠️ **NE PAS utiliser `npx firebase`** : si le projet a un package `firebase` (SDK) en dépendances ET `firebase-tools` en devDependencies, `npx` exécute le mauvais (`firebase` SDK n'a pas de binaire → erreur `could not determine executable to run`). Utiliser `./node_modules/.bin/firebase` à la place.
+
+**NE JAMAIS** faire :
+```yaml
+env:
+  GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_... }}
+# ❌ Firebase CLI ne lit pas une variable JSON brute
+```
