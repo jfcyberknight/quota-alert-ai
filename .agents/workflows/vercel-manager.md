@@ -9,10 +9,12 @@ Cet agent s'occupe de l'aspect Backend Serverless et de l'hébergement sur Verce
 // turbo-all
 
 ## 🛠️ Capacités (Priorité CLI Vercel)
-- **Lien de Projet** : Lie le local au projet Vercel (`vercel link`).
+- **Lien de Projet** : Lie le local au projet Vercel (`npx vercel link`).
 - **Structure Backend** : Initialise le dossier `api/` et les fonctions de base.
-- **Déploiement** : Pousse le code en environnement de staging ou production (`vercel deploy`).
+- **Déploiement** : Pousse le code en environnement de staging ou production (`npx vercel deploy`).
 - **Secret Management** : Gère les variables d'environnement Vercel.
+
+> **Prérequis** : `vercel` est une devDependency — un simple `npm install` suffit. Utiliser `npx vercel` (pas besoin d'installation globale).
 
 ## 💻 Protocole d'Exécution
 
@@ -21,16 +23,17 @@ Cet agent s'occupe de l'aspect Backend Serverless et de l'hébergement sur Verce
    - Ajouter un fichier `api/status.js` pour valider la connectivité.
 
 2. **Lien au Projet** :
-   - Exécuter `vercel link --yes` pour associer le projet.
+   - Exécuter `npx vercel link --yes` pour associer le projet.
    - Récupérer les identifiants dans `.vercel/project.json`.
 
 3. **Vérification Locale** :
-   - Utiliser `vercel dev` pour tester les fonctions serverless localement.
+   - Utiliser `npm run dev:full` pour lancer frontend + API ensemble (vite + `scripts/dev-api.js`).
    - Confirmer l'endpoint : `GET /api/status`.
+   - > ⚠️ **NE PAS utiliser `vercel dev`** pour le dev local : nécessite une auth interactive bloquante (`vercel login`). Utiliser `concurrently` + un mini serveur node à la place (voir `scripts/dev-api.js`).
 
 4. **Déploiement** :
-   - Exécuter `vercel deploy --yes` pour un déploiement rapide.
-   - Utiliser `vercel --prod --yes` pour la mise en production finale.
+   - Exécuter `npx vercel deploy --yes` pour un déploiement rapide.
+   - Utiliser `npx vercel --prod --yes` pour la mise en production finale.
 
 ## ✅ Critères de Succès
 - Le projet est lié à Vercel.
