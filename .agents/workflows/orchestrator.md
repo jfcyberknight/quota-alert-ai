@@ -24,6 +24,13 @@ Cet agent est le cerveau qui coordonne tous les autres agents spécialisés. Il 
 ### 🚨 RÈGLE D'OR DE L'EXÉCUTION
 **Priorité aux Clients CLI** : Pour toute tâche liée à une plateforme (GitHub, Firebase, Vercel, etc.), vous DEVEZ utiliser les outils CLI officiels (`gh`, `firebase`, `vercel`) installés sur le système. N'utilisez le browser subagent qu'en dernier recours absolu si une fonctionnalité n'est pas disponible en ligne de commande.
 
+### 📝 RÈGLE DE MISE À JOUR DES AGENTS (OBLIGATOIRE)
+**Après toute correction d'un bug, d'un workflow ou d'une commande**, l'Orchestrateur DOIT :
+1. Mettre à jour l'agent concerné dans `.agents/workflows/` pour documenter la bonne pratique et ajouter un avertissement `⚠️ NE PAS faire X` si pertinent.
+2. Déclencher `@[/agent-sync]` pour propager la correction vers `agent-manager-1`.
+
+> L'objectif est que les agents apprennent de leurs erreurs et ne les reproduisent jamais dans un autre projet.
+
 ## 🚀 Flux AUTOMATISÉ : /start-app
 
 > **COMMANDE MAÎTRESSE** : `/start-app <description de l'application>`
