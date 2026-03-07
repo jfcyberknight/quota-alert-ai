@@ -206,13 +206,19 @@ function ApiKeysSection({ user }) {
     if (!form.name.trim() || !form.value.trim()) return;
     setSaving(true);
     try {
-      await addDoc(colRef, {
-        userId: user.uid,
-        provider: form.provider,
-        name: form.name.trim(),
-        value: form.value.trim(),
-        createdAt: new Date().toISOString(),
-      });
+      const timeout = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Délai dépassé — vérifiez les règles Firestore')), 10000)
+      );
+      await Promise.race([
+        addDoc(colRef, {
+          userId: user.uid,
+          provider: form.provider,
+          name: form.name.trim(),
+          value: form.value.trim(),
+          createdAt: new Date().toISOString(),
+        }),
+        timeout,
+      ]);
       setForm({ provider: 'openai', name: '', value: '' });
       closeForm();
       await loadKeys();
