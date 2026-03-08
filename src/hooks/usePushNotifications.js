@@ -12,20 +12,21 @@ function urlBase64ToUint8Array(base64String) {
 }
 
 export function usePushNotifications(user) {
-  const [status, setStatus] = useState('idle'); // idle | loading | granted | denied | unsupported
+  const [status, setStatus] = useState(() => {
+    if (typeof window === 'undefined') return 'idle';
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return 'unsupported';
+    if (Notification.permission === 'denied') return 'denied';
+    return 'idle';
+  });
 
   useEffect(() => {
-    if (!user) return;
-    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-      setStatus('unsupported'); return;
-    }
-    if (Notification.permission === 'denied') { setStatus('denied'); return; }
+    if (!user || status === 'unsupported' || status === 'denied') return;
 
     // Check if already subscribed in Firestore
     getDoc(doc(db, 'pushSubscriptions', user.uid)).then(snap => {
       if (snap.exists()) setStatus('granted');
     });
-  }, [user?.uid]);
+  }, [user, user?.uid, status]);
 
   async function subscribe() {
     if (!user) return;

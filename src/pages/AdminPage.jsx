@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { collection, addDoc, getDocs, deleteDoc, doc, query, where } from 'firebase/firestore';
 import { db } from '../firebase';
 
@@ -127,7 +127,6 @@ function ApiKeysSection({ user }) {
   const [deletingId, setDeletingId] = useState(null);
 
   const loadKeys = React.useCallback(async () => {
-    setLoading(true);
     try {
       const colRef = collection(db, 'apiKeys');
       const q = query(colRef, where('userId', '==', user.uid));
@@ -139,7 +138,11 @@ function ApiKeysSection({ user }) {
     setLoading(false);
   }, [user.uid]);
 
-  useEffect(() => { loadKeys(); }, [loadKeys]);
+  useEffect(() => {
+    (async () => {
+      await loadKeys();
+    })();
+  }, [loadKeys]);
 
   const closeForm = () => {
     setClosing(true);
@@ -173,9 +176,9 @@ function ApiKeysSection({ user }) {
       setForm({ provider: 'openai', name: '', value: '' });
       closeForm();
       await loadKeys();
-      setToast({ id: Date.now(), message: 'Clé enregistrée avec succès', type: 'success' });
+      setToast({ id: 'save-success', message: 'Clé enregistrée avec succès', type: 'success' });
     } catch (e) {
-      setToast({ id: Date.now(), message: 'Erreur : ' + e.message, type: 'error' });
+      setToast({ id: 'save-error', message: 'Erreur : ' + e.message, type: 'error' });
     }
     setSaving(false);
   };
@@ -186,10 +189,10 @@ function ApiKeysSection({ user }) {
     try {
       await deleteDoc(doc(db, 'apiKeys', id));
       setKeys(k => k.filter(x => x.id !== id));
-      setToast({ id: Date.now(), message: 'Clé supprimée', type: 'success' });
+      setToast({ id: 'delete-success-' + id, message: 'Clé supprimée', type: 'success' });
     } catch (e) {
       console.error(e);
-      setToast({ id: Date.now(), message: 'Erreur suppression', type: 'error' });
+      setToast({ id: 'delete-error-' + id, message: 'Erreur suppression', type: 'error' });
     }
     setDeletingId(null);
   };
