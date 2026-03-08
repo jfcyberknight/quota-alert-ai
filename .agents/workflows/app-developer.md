@@ -15,6 +15,7 @@ Cet agent est le moteur de code. Il prend les spécifications et le design pour 
 
 ## 📋 Instructions de Développement
 - **Priorité CLI** : Utiliser systématiquement les outils en ligne de commande (`gh`, `firebase`, `vercel`) pour les interactions avec l'infrastructure.
+- **ZÉRO EXPOSITION DE CLÉS** : Interdiction formelle d'envoyer une clé API (ou tout secret) depuis le frontend vers l'API. Le backend authentifie l'utilisateur via Token Firebase et récupère les secrets lui-même.
 - Écrire un code modulaire et testable.
 
 1. **Lecture des Specs** :

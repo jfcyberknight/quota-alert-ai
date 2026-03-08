@@ -1,6 +1,9 @@
 import { createServer } from 'http'
 import { pathToFileURL } from 'url'
 import { join } from 'path'
+import dotenv from 'dotenv'
+
+dotenv.config({ path: '.env.local' })
 
 const PORT = 3000
 
@@ -17,19 +20,22 @@ function patchRes(res) {
 const server = createServer(async (req, res) => {
   const url = new URL(req.url, `http://localhost:${PORT}`)
   const pathname = url.pathname
+  console.log(`[API] ${req.method} ${pathname}`)
 
-  if (!pathname.startsWith('/api/')) {
+  console.log(`[API] ${req.method} ${pathname}`)
+
+  if (!pathname.startsWith('/svc/')) {
     res.writeHead(404)
     res.end('Not found')
     return
   }
 
-  const funcName = pathname.replace('/api/', '').replace(/\/$/, '') || 'index'
+  const funcName = pathname.replace('/svc/', '').replace(/\/$/, '') || 'index'
   const funcPath = join(process.cwd(), 'api', `${funcName}.js`)
 
   try {
     const mod = await import(pathToFileURL(funcPath).href + '?t=' + Date.now())
-    mod.default(req, patchRes(res))
+    await mod.default(req, patchRes(res))
   } catch (e) {
     res.writeHead(500, { 'Content-Type': 'application/json' })
     res.end(JSON.stringify({ error: e.message }))
@@ -37,5 +43,5 @@ const server = createServer(async (req, res) => {
 })
 
 server.listen(PORT, () => {
-  console.log(`API dev server → http://localhost:${PORT}/api`)
+  console.log(`API dev server → http://localhost:${PORT}/svc`)
 })

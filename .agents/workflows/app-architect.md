@@ -29,8 +29,9 @@ Cet agent est le premier maillon de la chaîne de production. Il transforme une 
    > La toute première itération du projet doit UNIQUEMENT générer un socle contenant le Nom de l'app, l'authentification avec Google, et un backend Vercel servant d'intermédiaire.
    > Limitez explicitement les spécifications du MVP ci-dessous à ce strict minimum. Les autres fonctionnalités seront ajoutées itérativement.
 
-   ## 📋 Instructions de l'Architecte
-   - Toujours concevoir en pensant aux capacités des CLI (`gh`, `firebase`, `vercel`).
+    ## 📋 Instructions de l'Architecte
+    - **SÉCURITÉ CRITIQUE** : Les clés API (OpenAI, etc.) ne doivent JAMAIS être exposées au client. Toujours prévoir un backend qui récupère les clés via Firebase Admin SDK et effectue les appels API tiers.
+    - Toujours concevoir en pensant aux capacités des CLI (`gh`, `firebase`, `vercel`).
    - Prioriser les solutions automatisables via script.
 
    ## 🛠️ Stack Technique

@@ -194,6 +194,31 @@ function Dashboard({ user }) {
   const [loadingKeys, setLoadingKeys] = useState(true);
   const [loadingQuotas, setLoadingQuotas] = useState({});
 
+  const fetchQuotas = React.useCallback(async (keys) => {
+    for (const key of keys) {
+      // Normalize to display name (e.g. 'openai' → 'OpenAI')
+      const providerName = providers.find(p => p.name.toLowerCase() === key.provider.toLowerCase())?.name || key.provider;
+      setLoadingQuotas(prev => ({ ...prev, [providerName]: true }));
+      try {
+        const idToken = await user.getIdToken();
+        const res = await fetch('/svc/v1', {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${idToken}`
+          },
+          body: JSON.stringify({ p: providerName }), // Send only the provider name
+        });
+        const data = await res.json();
+        setQuotas(prev => ({ ...prev, [providerName]: data }));
+      } catch {
+        setQuotas(prev => ({ ...prev, [providerName]: { error: 'Impossible de contacter l\'API' } }));
+      } finally {
+        setLoadingQuotas(prev => ({ ...prev, [providerName]: false }));
+      }
+    }
+  }, []);
+
   useEffect(() => {
     async function fetchKeys() {
       try {
@@ -209,28 +234,7 @@ function Dashboard({ user }) {
       }
     }
     fetchKeys();
-  }, [user.uid]);
-
-  async function fetchQuotas(keys) {
-    for (const key of keys) {
-      // Normalize to display name (e.g. 'openai' → 'OpenAI')
-      const providerName = providers.find(p => p.name.toLowerCase() === key.provider.toLowerCase())?.name || key.provider;
-      setLoadingQuotas(prev => ({ ...prev, [providerName]: true }));
-      try {
-        const res = await fetch('/api/quotas', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ provider: providerName, apiKey: key.value }),
-        });
-        const data = await res.json();
-        setQuotas(prev => ({ ...prev, [providerName]: data }));
-      } catch {
-        setQuotas(prev => ({ ...prev, [providerName]: { error: 'Impossible de contacter l\'API' } }));
-      } finally {
-        setLoadingQuotas(prev => ({ ...prev, [providerName]: false }));
-      }
-    }
-  }
+  }, [user.uid, db, fetchQuotas]); // All dependencies included
 
   const { status: pushStatus, subscribe, unsubscribe } = usePushNotifications(user);
   const configuredProviders = new Set(keys.map(k => k.provider));
@@ -308,12 +312,12 @@ function App() {
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (u) => { setUser(u); setLoading(false); });
-    fetch('/api/status')
+    fetch('/svc/ping')
       .then(r => r.json())
       .then(d => setBackendStatus(d.message))
       .catch(() => setBackendStatus('Erreur de connexion au backend'));
     return unsub;
-  }, []);
+  }, [auth]);
 
   const handleLogin = async () => {
     try { await loginWithGoogle(); }

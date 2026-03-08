@@ -34,6 +34,7 @@ Cet agent s'occupe de toute l'infrastructure Firebase via la ligne de commande.
 4. **Synchronisation Locale** :
    - Injecter les clés dans `.env.local` pour le développement.
    - Mettre à jour `src/firebase.js` pour utiliser ces variables.
+   - **SÉCURITÉ** : Les clés API tierces (OpenAI, Gemini) stockées dans Firestore ne doivent être lues QUE par le backend via l'Admin SDK. Jamais par le frontend.
 
 ### 5. 🔐 Règles Firestore — Déploiement automatique via CI
 
