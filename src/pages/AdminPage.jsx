@@ -175,11 +175,10 @@ function ApiKeysSection({ user }) {
   const [toast, setToast] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
 
-  const colRef = collection(db, 'apiKeys');
-
-  const loadKeys = async () => {
+  const loadKeys = React.useCallback(async () => {
     setLoading(true);
     try {
+      const colRef = collection(db, 'apiKeys');
       const q = query(colRef, where('userId', '==', user.uid));
       const snap = await getDocs(q);
       setKeys(snap.docs.map(d => ({ id: d.id, ...d.data() })));
@@ -187,9 +186,9 @@ function ApiKeysSection({ user }) {
       console.error(e);
     }
     setLoading(false);
-  };
+  }, [user.uid]);
 
-  useEffect(() => { loadKeys(); }, []);
+  useEffect(() => { loadKeys(); }, [loadKeys]);
 
   const closeForm = () => {
     setClosing(true);
@@ -206,6 +205,7 @@ function ApiKeysSection({ user }) {
     if (!form.name.trim() || !form.value.trim()) return;
     setSaving(true);
     try {
+      const colRef = collection(db, 'apiKeys');
       const timeout = new Promise((_, reject) =>
         setTimeout(() => reject(new Error('Délai dépassé — vérifiez les règles Firestore')), 10000)
       );
@@ -222,9 +222,9 @@ function ApiKeysSection({ user }) {
       setForm({ provider: 'openai', name: '', value: '' });
       closeForm();
       await loadKeys();
-      setToast({ message: 'Clé enregistrée avec succès', type: 'success' });
+      setToast({ id: Date.now(), message: 'Clé enregistrée avec succès', type: 'success' });
     } catch (e) {
-      setToast({ message: 'Erreur : ' + e.message, type: 'error' });
+      setToast({ id: Date.now(), message: 'Erreur : ' + e.message, type: 'error' });
     }
     setSaving(false);
   };
@@ -235,9 +235,9 @@ function ApiKeysSection({ user }) {
     try {
       await deleteDoc(doc(db, 'apiKeys', id));
       setKeys(k => k.filter(x => x.id !== id));
-      setToast({ message: 'Clé supprimée', type: 'success' });
+      setToast({ id: Date.now(), message: 'Clé supprimée', type: 'success' });
     } catch (e) {
-      setToast({ message: 'Erreur suppression', type: 'error' });
+      setToast({ id: Date.now(), message: 'Erreur suppression', type: 'error' });
     }
     setDeletingId(null);
   };
@@ -249,7 +249,7 @@ function ApiKeysSection({ user }) {
     <div>
       <style>{ANIM_STYLES}</style>
 
-      {toast && <Toast key={toast.message + Date.now()} message={toast.message} type={toast.type} onDone={() => setToast(null)} />}
+      {toast && <Toast key={toast.id || toast.message} message={toast.message} type={toast.type} onDone={() => setToast(null)} />}
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
         <span style={{ fontSize: '0.875rem', color: '#555' }}>{keys.length} clé{keys.length !== 1 ? 's' : ''} enregistrée{keys.length !== 1 ? 's' : ''}</span>
