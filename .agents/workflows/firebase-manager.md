@@ -35,6 +35,43 @@ Cet agent s'occupe de toute l'infrastructure Firebase via la ligne de commande.
    - Injecter les clés dans `.env.local` pour le développement.
    - Mettre à jour `src/firebase.js` pour utiliser ces variables.
 
+### 5. 🔐 Règles Firestore — Déploiement automatique via CI
+
+> ⚠️ **NE JAMAIS demander à l'utilisateur de publier les règles manuellement dans la Firebase Console.**
+> Tout se fait via CI avec le compte de service.
+
+**Créer `firestore.rules` à la racine et l'ajouter dans `firebase.json` :**
+```json
+{
+  "firestore": { "rules": "firestore.rules" },
+  "hosting": { ... }
+}
+```
+
+**Step à ajouter dans `deploy.yml` pour déployer les règles :**
+```yaml
+- name: Deploy Firestore rules
+  run: |
+    echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT_<PROJECT_ID> }}' > /tmp/sa.json
+    GOOGLE_APPLICATION_CREDENTIALS=/tmp/sa.json npx firebase deploy --only firestore:rules --project <project-id> --non-interactive
+    rm /tmp/sa.json
+```
+
+**Règles types (utilisateurs authentifiés — accès à leurs propres données) :**
+```
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /maCollection/{docId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow delete: if request.auth != null && resource.data.userId == request.auth.uid;
+    }
+  }
+}
+```
+> ⚠️ **NE PAS combiner `allow read, write` avec `resource.data` sur un create** — `resource` est `null` lors d'une création, ce qui bloque l'écriture et fait rester `addDoc` en attente indéfinie. Utiliser des règles séparées : `allow read`, `allow create`, `allow delete`.
+
 ## ✅ Critères de Succès
 - Le projet Firebase est actif.
 - Les clés SDK sont correctement intégrées à l'application.
