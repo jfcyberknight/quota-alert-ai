@@ -116,11 +116,21 @@ function QuotaCard({ provider, quota, loading, onRefresh }) {
             <h3 className="font-semibold text-gray-200 text-sm md:text-base">{hasQuota && quota.models ? quota.models[0] : p.name}</h3>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-gray-500 hidden sm:block">API</span>
-          <div className={`w-8 h-4 rounded-full relative ${hasQuota ? 'bg-blue-500' : 'bg-gray-700'}`}>
-            <div className={`absolute top-0.5 left-0.5 w-3 h-3 bg-white rounded-full transition-transform ${hasQuota ? 'translate-x-4' : ''}`} />
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-gray-500 hidden sm:block">API</span>
+            <div className={`w-8 h-4 rounded-full relative ${hasQuota ? 'bg-blue-500' : 'bg-gray-700'}`}>
+              <div className={`absolute top-0.5 left-0.5 w-3 h-3 bg-white rounded-full transition-transform ${hasQuota ? 'translate-x-4' : ''}`} />
+            </div>
           </div>
+          {!loading && (
+            <button 
+              onClick={(e) => { e.stopPropagation(); onRefresh && onRefresh(); }} 
+              className="text-gray-500 hover:text-white hover:rotate-180 transition-all duration-300 focus:outline-none p-1"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+            </button>
+          )}
         </div>
       </div>
 
@@ -170,15 +180,6 @@ function QuotaCard({ provider, quota, loading, onRefresh }) {
             ))}
           </div>
         </div>
-      )}
-
-      {!loading && (
-        <button 
-          onClick={(e) => { e.stopPropagation(); onRefresh && onRefresh(); }} 
-          className="absolute top-6 right-6 text-gray-500 hover:text-white hover:rotate-180 transition-all duration-300 focus:outline-none"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
-        </button>
       )}
     </div>
   );
