@@ -89,46 +89,123 @@ function Landing({ onLogin }) {
   );
 }
 
-function QuotaCard({ provider, quota, loading }) {
+function QuotaCard({ provider, quota, loading, onRefresh }) {
   const p = providers.find(x => x.name === provider);
   const hasQuota = quota && !quota.error;
+  const percentage = hasQuota ? quota.percent : 0;
+  
+  // Calculate status based on percentage
+  const status = percentage > 80 ? 'Critical' : percentage > 50 ? 'Warning' : 'Healthy';
+  const statusColor = status === 'Critical' ? '#ef4444' : status === 'Warning' ? '#fbbf24' : '#22c55e';
+
+  // Format Reset Time
+  const formatResetTime = (iso) => {
+    if (!iso) return '-';
+    const date = new Date(iso);
+    return date.toLocaleString();
+  };
+
+  // Format Reset In
+  const formatResetIn = (iso) => {
+    if (!iso) return '-';
+    const diff = new Date(iso) - new Date();
+    if (diff <= 0) return 'Prêt';
+    const hours = Math.floor(diff / 3600000);
+    const mins = Math.floor((diff % 3600000) / 60000);
+    return `${hours}h ${mins}m`;
+  };
 
   return (
     <div style={{
-      padding: '1.5rem', background: 'rgba(255,255,255,0.03)',
-      border: '1px solid rgba(255,255,255,0.07)', borderRadius: '12px',
+      padding: '1.25rem', background: '#1a1d21',
+      border: `1px solid ${loading ? 'rgba(255,255,255,0.1)' : hasQuota ? '#2563eb' : 'rgba(255,255,255,0.05)'}`, 
+      borderRadius: '12px',
+      boxShadow: hasQuota ? '0 0 15px rgba(37,99,235,0.1)' : 'none',
+      transition: 'all 0.3s ease',
+      color: '#e2e8f0',
+      position: 'relative'
     }}>
+      {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-        <span style={{ fontWeight: 600 }}>{p.icon} {p.name}</span>
-        {loading ? (
-          <span style={{ fontSize: '0.72rem', color: '#555', background: 'rgba(255,255,255,0.05)', padding: '0.2rem 0.6rem', borderRadius: 4 }}>
-            Chargement...
-          </span>
-        ) : hasQuota ? (
-          <span style={{ fontSize: '0.72rem', color: '#22c55e', background: 'rgba(34,197,94,0.08)', padding: '0.2rem 0.6rem', borderRadius: 4 }}>
-            Connecté
-          </span>
-        ) : quota?.error ? (
-          <span style={{ fontSize: '0.72rem', color: '#f87171', background: 'rgba(239,68,68,0.08)', padding: '0.2rem 0.6rem', borderRadius: 4 }}>
-            Erreur
-          </span>
-        ) : (
-          <span style={{ fontSize: '0.72rem', color: '#555', background: 'rgba(255,255,255,0.05)', padding: '0.2rem 0.6rem', borderRadius: 4 }}>
-            Non configuré
-          </span>
-        )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <span style={{ fontSize: '1.2rem', opacity: 0.8 }}>📦</span>
+          <span style={{ fontWeight: 600, fontSize: '0.95rem' }}>{hasQuota && quota.models ? quota.models[0] : p.name}</span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ fontSize: '0.8rem', cursor: 'pointer', opacity: 0.5 }}>✏️</span>
+          <div style={{ 
+            width: '32px', height: '18px', background: hasQuota ? '#3b82f6' : '#334155', 
+            borderRadius: '20px', position: 'relative', cursor: 'pointer' 
+          }}>
+            <div style={{ 
+              width: '14px', height: '14px', background: 'white', borderRadius: '50%',
+              position: 'absolute', top: '2px', left: hasQuota ? '16px' : '2px', transition: 'all 0.2s'
+            }} />
+          </div>
+        </div>
       </div>
-      <div style={{ height: 5, background: 'rgba(255,255,255,0.06)', borderRadius: 3, marginBottom: '0.75rem' }}>
-        <div style={{
-          height: '100%',
-          width: `${hasQuota ? quota.percent : 0}%`,
-          background: hasQuota && quota.percent > 80 ? '#ef4444' : p.color,
-          borderRadius: 3, transition: 'width 0.6s ease',
-        }} />
+
+      {/* Circle Progress */}
+      <div style={{ position: 'relative', width: '120px', height: '120px', margin: '0 auto 1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <svg width="120" height="120" viewBox="0 0 120 120">
+          <circle cx="60" cy="60" r="50" fill="none" stroke="#2d333b" strokeWidth="10" />
+          <circle cx="60" cy="60" r="50" fill="none" stroke={statusColor} strokeWidth="10" 
+            strokeDasharray={`${(percentage / 100) * 314} 314`}
+            strokeDashoffset="0"
+            strokeLinecap="round"
+            style={{ transform: 'rotate(-90deg)', transformOrigin: 'center', transition: 'stroke-dasharray 1s ease' }}
+          />
+        </svg>
+        <div style={{ position: 'absolute', textAlign: 'center' }}>
+          <div style={{ fontSize: '1.2rem', fontWeight: 700 }}>{percentage.toFixed(2)}%</div>
+        </div>
       </div>
-      <div style={{ fontSize: '0.8rem', color: '#555' }}>
-        {loading ? '—' : hasQuota ? quota.label : quota?.error || 'Aucune clé configurée'}
+
+      {/* Details Section */}
+      <div style={{ fontSize: '0.85rem', color: '#8b949e', display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '1.5rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+          <span>Reset In</span>
+          <span style={{ color: '#f0f6fc', fontWeight: 600 }}>{hasQuota ? formatResetIn(quota.resetTime) : '-'}</span>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+          <span>Reset Time</span>
+          <span style={{ fontSize: '0.75rem' }}>{hasQuota ? formatResetTime(quota.resetTime) : '-'}</span>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+          <span>Status</span>
+          <span style={{ color: statusColor, fontWeight: 700, fontSize: '0.75rem' }}>
+            {loading ? 'LOADING' : hasQuota ? status.toUpperCase() : 'OFFLINE'}
+          </span>
+        </div>
       </div>
+
+      {/* Included Models Section */}
+      {hasQuota && quota.models && (
+        <div style={{ borderTop: '1px dashed #30363d', paddingTop: '1rem' }}>
+          <div style={{ fontSize: '0.75rem', color: '#8b949e', marginBottom: '0.75rem' }}>
+            Included Models ({quota.models.length}):
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+            {quota.models.map((m, i) => (
+              <span key={i} style={{ 
+                fontSize: '0.7rem', background: 'rgba(37,99,235,0.1)', color: '#58a6ff',
+                padding: '3px 10px', borderRadius: '20px', border: '1px solid rgba(56,139,253,0.15)'
+              }}>
+                {m}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Manual Refresh Button (Discrete) */}
+      {!loading && (
+        <button onClick={(e) => { e.stopPropagation(); onRefresh && onRefresh(); }} style={{ 
+          position: 'absolute', bottom: '1rem', right: '1rem', background: 'none', border: 'none', cursor: 'pointer', opacity: 0.2
+        }}>
+          🔄
+        </button>
+      )}
     </div>
   );
 }
@@ -268,7 +345,6 @@ function Dashboard({ user }) {
             {pushStatus === 'granted' && '🔔 Alertes activées'}
             {pushStatus === 'idle' && '🔕 Activer les alertes'}
             {pushStatus === 'loading' && '⏳ En cours...'}
-            {pushStatus === 'denied' && '🚫 Notifications bloquées'}
           </button>
         )}
       </div>
@@ -280,9 +356,18 @@ function Dashboard({ user }) {
             provider={p.name}
             quota={quotas[p.name]}
             loading={loadingKeys || !!loadingQuotas[p.name]}
+            onRefresh={() => fetchQuotas(keys.filter(k => k.provider.toLowerCase() === p.name.toLowerCase()))}
           />
         ))}
       </div>
+
+      {/* Debug view */}
+      <details style={{ marginTop: '2rem', opacity: 0.5 }}>
+        <summary style={{ cursor: 'pointer', fontSize: '0.8rem' }}>Debug Raw Data</summary>
+        <pre style={{ fontSize: '0.65rem', background: '#111', padding: '1rem', borderRadius: 8, overflow: 'auto', textAlign: 'left' }}>
+          {JSON.stringify(quotas, null, 2)}
+        </pre>
+      </details>
 
       {!loadingKeys && configuredProviders.size === 0 && (
         <div style={{
