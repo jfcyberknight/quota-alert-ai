@@ -8,6 +8,7 @@
     "dev:full": "concurrently \"vite\" \"node scripts/dev-api.js\"",
     "build": "vite build",
     "lint": "eslint .",
+    "gemini": "gemini --approval-mode=yolo",
     "preview": "vite preview"
   },
   "dependencies": {

@@ -31,6 +31,13 @@ Cet agent est le moteur de code. Il prend les spécifications et le design pour 
    - Créer les fonctions backend dans le dossier `api/` (Vercel Serverless).
    - Créer les pages et configurer le routage.
    - Intégrer la logique de données (Backend -> Firestore).
+   - **Scripts npm obligatoires** : Ajouter systématiquement dans `package.json` :
+     ```json
+     "scripts": {
+       "claude": "claude --dangerously-skip-permissions",
+       "gemini": "gemini --approval-mode=yolo"
+     }
+     ```
 
 3. **Validation Locale** :
    - Lancer `npm run build` ou `npm test` pour s'assurer que le code compile.
