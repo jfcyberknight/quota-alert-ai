@@ -27,7 +27,6 @@ export default async function handler(req, res) {
   try {
     const decodedToken = await auth.verifyIdToken(token);
     const userId = decodedToken.uid;
-    console.log(`[API] User authenticated: ${userId}`);
 
     let body = '';
     await new Promise(resolve => { req.on('data', c => body += c); req.on('end', resolve); });
@@ -43,28 +42,30 @@ export default async function handler(req, res) {
       .where('provider', '==', providerLower)
       .get();
 
-    console.log(`[API] Firestore result size: ${q.size}`);
-
     if (q.empty) return res.status(404).json({ error: 'Clé non trouvée' });
     const apiKey = q.docs[0].data().value;
 
-    if (provider === 'OpenAI') return await getOpenAIQuota(apiKey, res);
-    if (provider === 'Anthropic') return await getAnthropicQuota(apiKey, res);
-    if (provider === 'Gemini') return await getGeminiQuota(apiKey, res);
-    return res.status(400).json({ error: 'Unknown provider' });
+    let result;
+    if (provider === 'OpenAI') result = await getOpenAIQuota(apiKey);
+    else if (provider === 'Anthropic') result = await getAnthropicQuota(apiKey);
+    else if (provider === 'Gemini') result = await getGeminiQuota(apiKey);
+    else return res.status(400).json({ error: 'Unknown provider' });
+
+    return res.json(result);
   } catch (e) {
+    console.error(`[API] Global error for ${req.method} ${req.url}:`, e.message);
     return res.status(500).json({ error: e.message });
   }
 }
 
-async function getOpenAIQuota(apiKey, res) {
+async function getOpenAIQuota(apiKey) {
   const headers = { Authorization: `Bearer ${apiKey}` };
   
   // First, verify if the key is actually valid using a standard endpoint
   const checkRes = await fetch('https://api.openai.com/v1/models', { headers });
   if (!checkRes.ok) {
     const err = await checkRes.json().catch(() => ({}));
-    return res.status(checkRes.status).json({ error: err.error?.message || 'Clé OpenAI invalide' });
+    throw new Error(err.error?.message || 'Clé OpenAI invalide');
   }
 
   const start = getStartOfMonth();
@@ -83,70 +84,70 @@ async function getOpenAIQuota(apiKey, res) {
       const limit = sub.hard_limit_usd || sub.soft_limit_usd || 0;
       const used = (usage.total_usage || 0) / 100;
 
-      return res.json({
+      return {
         provider: 'OpenAI',
         used,
         limit,
         percent: limit > 0 ? Math.min(100, Math.round((used / limit) * 100)) : 0,
         unit: 'USD',
         label: `$${used.toFixed(2)} / $${limit.toFixed(2)}`,
-      });
+      };
     }
   } catch (err) {
     console.error('[API] OpenAI billing fetch failed:', err.message);
   }
 
   // Fallback: Key is valid but billing info is inaccessible
-  return res.json({
+  return {
     provider: 'OpenAI',
     used: 0,
     limit: 0,
     percent: 0,
     unit: 'USD',
     label: 'Clé valide — facturation masquée par OpenAI',
-  });
+  };
 }
 
-async function getAnthropicQuota(apiKey, res) {
+async function getAnthropicQuota(apiKey) {
   const r = await fetch('https://api.anthropic.com/v1/models', {
     headers: { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
   });
 
   if (!r.ok) {
     const err = await r.json().catch(() => ({}));
-    return res.status(r.status).json({ error: err.error?.message || 'Clé Anthropic invalide' });
+    throw new Error(err.error?.message || 'Clé Anthropic invalide');
   }
 
   const tokLimit = parseInt(r.headers.get('anthropic-ratelimit-tokens-limit') || '0');
   const tokRemaining = parseInt(r.headers.get('anthropic-ratelimit-tokens-remaining') || '0');
   const tokUsed = tokLimit - tokRemaining;
 
-  return res.json({
+  return {
     provider: 'Anthropic',
     used: tokUsed,
     limit: tokLimit,
     percent: tokLimit > 0 ? Math.min(100, Math.round((tokUsed / tokLimit) * 100)) : 0,
     unit: 'tokens/min',
     label: tokLimit > 0 ? `${tokUsed.toLocaleString()} / ${tokLimit.toLocaleString()} tokens` : 'Clé valide',
-  });
+  };
 }
 
-async function getGeminiQuota(apiKey, res) {
+async function getGeminiQuota(apiKey) {
   const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
 
   if (!r.ok) {
     const err = await r.json().catch(() => ({}));
-    return res.status(r.status).json({ error: err.error?.message || 'Clé Gemini invalide' });
+    throw new Error(err.error?.message || 'Clé Gemini invalide');
   }
 
-  return res.json({
+  return {
     provider: 'Gemini',
     used: 0,
     limit: 0,
     percent: 0,
     unit: '',
     label: 'Clé valide — quota non exposé par l\'API',
-  });
+  };
 }
 
 function getStartOfMonth() {
