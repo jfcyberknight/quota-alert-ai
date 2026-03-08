@@ -18,6 +18,11 @@ Cet agent est le moteur de code. Il prend les spécifications et le design pour 
 - **ZÉRO EXPOSITION DE CLÉS** : Interdiction formelle d'envoyer une clé API (ou tout secret) depuis le frontend vers l'API. Le backend authentifie l'utilisateur via Token Firebase et récupère les secrets lui-même.
 - Écrire un code modulaire et testable.
 
+## ⚡ Optimisation & Quota Management
+- **Édition Chirurgicale** : Pour économiser les tokens (quota de l'IA), privilégiez `replace_file_content` sur de petits blocs plutôt que de réécrire des fichiers entiers.
+- **Requêtes API Précises** : Pour la surveillance de quota (Gemini/Anthropic), **NE JAMAIS** boucler sur des modèles au hasard. Listez les modèles (`/models`) d'abord pour identifier une cible valide et éviter les 404/Quota waste.
+- **Pings Optimisés** : Utilisez les endpoints les plus légers possibles (ex: `max_tokens: 1`) pour les pings de santé et de rate-limit.
+
 1. **Lecture des Specs** :
    - Analyser `specifications.md` et le design système dans `index.css`.
 

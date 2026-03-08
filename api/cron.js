@@ -62,24 +62,15 @@ export default async function handler(req, res) {
 
 async function fetchQuota(provider, apiKey) {
   if (provider === 'OpenAI') {
-    const h = { Authorization: `Bearer ${apiKey}` };
-    const start = fmtDate(new Date(new Date().setDate(1)));
-    const end = fmtDate(new Date(Date.now() + 86400000));
-    const [subRes, usageRes] = await Promise.all([
-      fetch('https://api.openai.com/v1/dashboard/billing/subscription', { headers: h }),
-      fetch(`https://api.openai.com/v1/dashboard/billing/usage?start_date=${start}&end_date=${end}`, { headers: h }),
-    ]);
-    if (!subRes.ok) return null;
-    const sub = await subRes.json();
-    const usage = usageRes.ok ? await usageRes.json() : {};
-    const limit = sub.hard_limit_usd || sub.soft_limit_usd || 0;
-    const used = (usage.total_usage || 0) / 100;
-    return { percent: limit > 0 ? Math.min(100, Math.round((used / limit) * 100)) : 0, label: `$${used.toFixed(2)} / $${limit.toFixed(2)}` };
+    // OpenAI billing APIs are blocked for standard keys. We can't reliably trigger a quota alert.
+    return null;
   }
 
   if (provider === 'Anthropic') {
-    const r = await fetch('https://api.anthropic.com/v1/models', {
-      headers: { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
+    const r = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
+      body: JSON.stringify({ model: 'claude-3-haiku-20240307', max_tokens: 1, messages: [{ role: 'user', content: 'Ping' }] })
     });
     if (!r.ok) return null;
     const tokLimit = parseInt(r.headers.get('anthropic-ratelimit-tokens-limit') || '0');
@@ -87,8 +78,22 @@ async function fetchQuota(provider, apiKey) {
     const tokUsed = tokLimit - tokRemaining;
     return { percent: tokLimit > 0 ? Math.min(100, Math.round((tokUsed / tokLimit) * 100)) : 0, label: `${tokUsed.toLocaleString()} / ${tokLimit.toLocaleString()} tokens` };
   }
+  
+  if (provider === 'Gemini') {
+    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contents: [{ parts: [{ text: 'a' }] }] })
+    });
+    const hLimit = parseInt(r.headers.get('x-ratelimit-limit-requests') || r.headers.get('x-goog-ratelimit-limit') || '0');
+    const hRemaining = parseInt(r.headers.get('x-ratelimit-remaining-requests') || r.headers.get('x-goog-ratelimit-remaining') || '0');
+    if (hLimit > 0) {
+      const used = hLimit - hRemaining;
+      return { percent: Math.min(100, Math.round((used / hLimit) * 100)), label: `${used} / ${hLimit} reqs` };
+    }
+  }
 
-  return null; // Gemini: no quota API
+  return null;
 }
 
 function fmtDate(d) {
