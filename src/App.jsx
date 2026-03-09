@@ -1,12 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy, memo } from 'react';
 import { Routes, Route, Navigate, Link } from 'react-router-dom';
 import Layout from './components/Layout';
 import Navbar from './components/Navbar';
-import AdminPage from './pages/AdminPage';
 import { auth, loginWithGoogle, logout, db } from './firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { usePushNotifications } from './hooks/usePushNotifications';
+
+const AdminPage = lazy(() => import('./pages/AdminPage'));
 
 const providers = [
   { name: 'OpenAI', icon: '🤖', color: '#10a37f', from: 'from-[#10a37f]', to: 'to-[#0d8c6b]' },
@@ -82,7 +83,7 @@ function Landing({ onLogin }) {
   );
 }
 
-function QuotaCard({ provider, quota, loading, onRefresh }) {
+const QuotaCard = memo(({ provider, quota, loading, onRefresh }) => {
   const p = providers.find(x => x.name === provider);
   const hasQuota = quota && !quota.error;
   const percentage = hasQuota ? quota.percent : 0;
@@ -183,7 +184,7 @@ function QuotaCard({ provider, quota, loading, onRefresh }) {
       )}
     </div>
   );
-}
+});
 
 function GuideSection() {
   const [open, setOpen] = useState(false);
@@ -376,11 +377,18 @@ function App() {
   return (
     <Layout backendStatus={backendStatus}>
       <Navbar user={user} onLogin={handleLogin} onLogout={logout} />
-      <Routes>
-        <Route path="/" element={user ? <Dashboard user={user} /> : <Landing onLogin={handleLogin} />} />
-        <Route path="/admin" element={user ? <AdminPage user={user} /> : <Navigate to="/" />} />
-        <Route path="*" element={<Navigate to="/" />} />
-      </Routes>
+      <Suspense fallback={
+        <div className="flex items-center justify-center p-20 text-gray-500">
+          <div className="w-8 h-8 border-4 border-purple-500/20 border-t-purple-500 rounded-full animate-spin mr-3"></div>
+          Chargement de la page...
+        </div>
+      }>
+        <Routes>
+          <Route path="/" element={user ? <Dashboard user={user} /> : <Landing onLogin={handleLogin} />} />
+          <Route path="/admin" element={user ? <AdminPage user={user} /> : <Navigate to="/" />} />
+          <Route path="*" element={<Navigate to="/" />} />
+        </Routes>
+      </Suspense>
     </Layout>
   );
 }

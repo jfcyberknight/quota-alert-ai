@@ -98,6 +98,7 @@ export default async function handler(req, res) {
     else return res.status(400).json({ error: 'Unknown provider' });
 
     console.log(`[API] Result for ${provider}:`, JSON.stringify(result, null, 2));
+    res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate=300');
     return res.json(result);
   } catch (e) {
     console.error('[API ERROR]', e.message, e.stack);
