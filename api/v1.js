@@ -84,34 +84,35 @@ async function getOpenAIQuota(apiKey) {
 }
 
 async function getGeminiQuota(apiKey) {
-  let limit = 0, remaining = 0, percent = 0, resetTime = null, debug = [], detectedModel = 'gemini-2.5-flash';
+  let limit = 0, remaining = 0, percent = 0, resetTime = null, debug = [], detectedModel = 'gemini-1.5-flash';
   try {
-    const modelId = 'gemini-2.5-flash';
-    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelId}:generateContent?key=${apiKey}`, {
+    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${detectedModel}:generateContent?key=${apiKey}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ contents: [{ parts: [{ text: 'a' }] }] })
     });
     
     const h = r.headers;
-    const hLimit = parseInt(h.get('x-ratelimit-limit-requests') || h.get('x-goog-ratelimit-limit') || '0');
-    const hRemaining = parseInt(h.get('x-ratelimit-remaining-requests') || h.get('x-goog-ratelimit-remaining') || '0');
-    const hReset = h.get('x-ratelimit-reset-requests') || h.get('x-goog-ratelimit-reset');
+    const hLimit = parseInt(h.get('x-ratelimit-limit-requests') || h.get('x-goog-ratelimit-limit') || h.get('ratelimit-limit') || '0');
+    const hRemaining = parseInt(h.get('x-ratelimit-remaining-requests') || h.get('x-goog-ratelimit-remaining') || h.get('ratelimit-remaining') || '0');
+    const hReset = h.get('x-ratelimit-reset-requests') || h.get('x-goog-ratelimit-reset') || h.get('ratelimit-reset');
     
     if (hLimit > 0) {
       limit = hLimit;
       remaining = hRemaining;
       percent = parseFloat((( (limit - remaining) / limit) * 100).toFixed(2));
-      if (hReset) resetTime = new Date(Date.now() + parseInt(hReset) * 1000).toISOString();
-      debug.push('Hdr OK');
+      if (hReset) {
+         const resetVal = parseInt(hReset);
+         resetTime = resetVal > 1000000000 ? new Date(resetVal * 1000).toISOString() : new Date(Date.now() + resetVal * 1000).toISOString();
+      }
+      debug.push('H OK');
     } else if (r.ok) {
-      // Fallback: Key is valid but no headers. Assume Free Tier (15 RPM)
-      limit = 15;
+      limit = 15; 
       remaining = 15;
-      percent = 0;
-      debug.push('Fallback 15RPM');
+      debug.push('Free');
     } else {
-      debug.push(`Err:${r.status}`);
+      const err = await r.json().catch(() => ({}));
+      debug.push(`St:${r.status}`);
     }
   } catch (e) { debug.push(`F:${e.message}`); }
 
@@ -119,7 +120,7 @@ async function getGeminiQuota(apiKey) {
     provider: 'Gemini',
     used: limit - remaining, limit, percent,
     unit: 'RPM',
-    label: limit > 0 ? `${percent.toFixed(2)}% utilisé` : 'Clé active (Quota masqué)',
+    label: limit > 0 ? `${percent.toFixed(1)}% (${limit} RPM)` : 'Clé active',
     resetTime,
     models: [detectedModel],
     debug: debug.join('|')
@@ -127,49 +128,43 @@ async function getGeminiQuota(apiKey) {
 }
 
 async function getAnthropicQuota(apiKey) {
-  let limit = 1, remaining = 1, resetTime = null, debug = [];
-  let errorLabel = null;
+  let limit = 0, remaining = 0, resetTime = null, debug = [];
   try {
     const r = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
       body: JSON.stringify({ 
         model: 'claude-3-haiku-20240307', 
-        max_tokens: 1, 
-        messages: [{ role: 'user', content: 'Ping' }] 
+        max_tokens: 10, 
+        messages: [{ role: 'user', content: 'Hi' }] 
       })
     });
     
     const h = r.headers;
-    const hLimit = h.get('anthropic-ratelimit-tokens-limit') || h.get('x-ratelimit-limit-tokens');
-    const hRemaining = h.get('anthropic-ratelimit-tokens-remaining') || h.get('x-ratelimit-remaining-tokens');
-    const hReset = h.get('anthropic-ratelimit-requests-reset') || h.get('retry-after');
+    const tLimit = parseInt(h.get('anthropic-ratelimit-tokens-limit') || h.get('x-ratelimit-limit-tokens') || '0');
+    const tRemaining = parseInt(h.get('anthropic-ratelimit-tokens-remaining') || h.get('x-ratelimit-remaining-tokens') || '0');
+    const hReset = h.get('anthropic-ratelimit-tokens-reset') || h.get('retry-after');
 
-    if (hLimit) {
-      limit = parseInt(hLimit);
-      remaining = parseInt(hRemaining);
-      if (hReset) resetTime = new Date(Date.now() + parseInt(hReset) * 1000).toISOString();
-      debug.push('Hdr OK');
-    } else if (r.ok) {
-      debug.push('OK but No Hdr');
+    if (tLimit > 0) {
+      limit = tLimit;
+      remaining = tRemaining;
+      if (hReset) {
+        const seconds = parseInt(hReset) || 60;
+        resetTime = new Date(Date.now() + seconds * 1000).toISOString();
+      }
+      debug.push('H OK');
     } else {
       debug.push(`St:${r.status}`);
-      if (r.status === 400) {
-         const errBody = await r.json().catch(() => ({}));
-         if (errBody?.error?.message?.includes('credit balance is too low')) {
-            errorLabel = 'Crédits épuisés';
-         }
-      }
     }
   } catch (e) { debug.push(`Err:${e.message}`); }
 
   const used = limit - remaining;
-  const percent = parseFloat(((used / limit) * 100).toFixed(2));
+  const percent = limit > 0 ? parseFloat(((used / limit) * 100).toFixed(2)) : 0;
   return {
     provider: 'Anthropic',
     used, limit, percent,
-    unit: 'tokens/min',
-    label: errorLabel || (limit > 1 ? `${percent.toFixed(2)}% utilisé` : 'Clé active (Quota masqué)'),
+    unit: 'tokens',
+    label: limit > 0 ? `${percent.toFixed(1)}% tokens` : 'Clé active',
     resetTime,
     models: ['Claude 3 Haiku'],
     debug: debug.join('|')
