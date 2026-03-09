@@ -11,6 +11,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
       - name: Install dependencies
         run: npm ci
 
@@ -28,31 +34,16 @@ jobs:
       - name: Set Vercel env vars
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
           SA_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_QUOTA_ALERT_AI_JV }}
           VAPID_PUB: ${{ secrets.VAPID_PUBLIC_KEY }}
           VAPID_PRIV: ${{ secrets.VAPID_PRIVATE_KEY }}
           CRON_SEC: ${{ secrets.CRON_SECRET }}
-          VITE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
-          VITE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
-          VITE_PROJ_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
-          VITE_STORAGE: ${{ secrets.VITE_FIREBASE_STORAGE_BUCKET }}
-          VITE_SENDER: ${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}
-          VITE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
-          VITE_VAPID_PUB: ${{ secrets.VITE_VAPID_PUBLIC_KEY }}
         run: |
           printf %s "$SA_JSON" | npx vercel env add FIREBASE_SERVICE_ACCOUNT production --token=$VERCEL_TOKEN --force
           printf %s "$VAPID_PUB" | npx vercel env add VAPID_PUBLIC_KEY production --token=$VERCEL_TOKEN --force
           printf %s "$VAPID_PRIV" | npx vercel env add VAPID_PRIVATE_KEY production --token=$VERCEL_TOKEN --force
           printf %s "$CRON_SEC" | npx vercel env add CRON_SECRET production --token=$VERCEL_TOKEN --force
-          printf %s "$VITE_API_KEY" | npx vercel env add VITE_FIREBASE_API_KEY production --token=$VERCEL_TOKEN --force
-          printf %s "$VITE_AUTH_DOMAIN" | npx vercel env add VITE_FIREBASE_AUTH_DOMAIN production --token=$VERCEL_TOKEN --force
-          printf %s "$VITE_PROJ_ID" | npx vercel env add VITE_FIREBASE_PROJECT_ID production --token=$VERCEL_TOKEN --force
-          printf %s "$VITE_STORAGE" | npx vercel env add VITE_FIREBASE_STORAGE_BUCKET production --token=$VERCEL_TOKEN --force
-          printf %s "$VITE_SENDER" | npx vercel env add VITE_FIREBASE_MESSAGING_SENDER_ID production --token=$VERCEL_TOKEN --force
-          printf %s "$VITE_APP_ID" | npx vercel env add VITE_FIREBASE_APP_ID production --token=$VERCEL_TOKEN --force
-          printf %s "$VITE_VAPID_PUB" | npx vercel env add VITE_VAPID_PUBLIC_KEY production --token=$VERCEL_TOKEN --force
+          # Les variables VITE_* sont statiques et devraient être gérées dans le dashboard Vercel pour gagner du temps en CI.
 
 
       - name: Deploy to Vercel
