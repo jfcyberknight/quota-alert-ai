@@ -4,9 +4,16 @@ import { getAuth } from 'firebase-admin/auth';
 
 function initFirebase() {
   if (getApps().length > 0) return { db: getFirestore(), auth: getAuth() };
-  const saData = process.env.FIREBASE_SERVICE_ACCOUNT;
+  let saData = process.env.FIREBASE_SERVICE_ACCOUNT;
   if (!saData) throw new Error('Variable FIREBASE_SERVICE_ACCOUNT manquante');
+  
+  // Vercel env vars can sometimes be wrapped in extra quotes
+  if (saData.startsWith('"') && saData.endsWith('"')) saData = saData.slice(1, -1);
+  
   const sa = JSON.parse(saData);
+  // Ensure private key handles newlines correctly
+  if (sa.private_key) sa.private_key = sa.private_key.replace(/\\n/g, '\n');
+  
   const app = initializeApp({ credential: cert(sa) });
   return { db: getFirestore(app), auth: getAuth(app) };
 }
@@ -31,9 +38,18 @@ export default async function handler(req, res) {
     const decodedToken = await auth.verifyIdToken(token);
     const userId = decodedToken.uid;
 
-    let body = '';
-    await new Promise(resolve => { req.on('data', c => body += c); req.on('end', resolve); });
-    const { p: provider } = JSON.parse(body);
+    // Vercel auto-parses req.body for application/json
+    let provider;
+    if (req.body && req.body.p) {
+      provider = req.body.p;
+    } else {
+      let body = '';
+      await new Promise(resolve => { req.on('data', c => body += c); req.on('end', resolve); });
+      const parsed = JSON.parse(body || '{}');
+      provider = parsed.p;
+    }
+
+    if (!provider) return res.status(400).json({ error: 'Provider missing in request body' });
 
     const q = await db.collection('apiKeys').where('userId', '==', userId).where('provider', '==', provider.toLowerCase()).get();
     if (q.empty) return res.status(404).json({ error: 'Clé non trouvée' });
@@ -48,7 +64,8 @@ export default async function handler(req, res) {
     console.log(`[API] Result for ${provider}:`, JSON.stringify(result, null, 2));
     return res.json(result);
   } catch (e) {
-    return res.status(500).json({ error: e.message });
+    console.error('[API ERROR]', e);
+    return res.status(500).json({ error: e.message, stack: e.stack });
   }
 }
 
