@@ -240,23 +240,34 @@ function Dashboard({ user }) {
   const [loadingQuotas, setLoadingQuotas] = useState({});
 
   const fetchQuotas = React.useCallback(async (keysList) => {
-    for (const key of keysList) {
-      const providerName = providers.find(p => p.name.toLowerCase() === key.provider.toLowerCase())?.name || key.provider;
-      setLoadingQuotas(prev => ({ ...prev, [providerName]: true }));
-      try {
-        const idToken = await user.getIdToken();
-        const res = await fetch(`${API_BASE}/api/v1`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
-          body: JSON.stringify({ p: providerName }),
-        });
-        const data = await res.json();
-        setQuotas(prev => ({ ...prev, [providerName]: data }));
-      } catch {
-        setQuotas(prev => ({ ...prev, [providerName]: { error: 'Impossible de contacter l\'API' } }));
-      } finally {
-        setLoadingQuotas(prev => ({ ...prev, [providerName]: false }));
+    if (keysList.length === 0) return;
+    
+    // Grouper tous les noms de providers configurés
+    const providerNames = keysList.map(key => 
+      providers.find(p => p.name.toLowerCase() === key.provider.toLowerCase())?.name || key.provider
+    );
+
+    // Activer le chargement pour tous les providers concernés
+    providerNames.forEach(p => setLoadingQuotas(prev => ({ ...prev, [p]: true })));
+
+    try {
+      const idToken = await user.getIdToken();
+      const res = await fetch(`${API_BASE}/api/v1`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
+        body: JSON.stringify({ ps: providerNames }), // Utilisation du nouveau mode batch "ps"
+      });
+      
+      const data = await res.json();
+      if (data.results) {
+        const newQuotas = {};
+        data.results.forEach(r => { newQuotas[r.provider] = r; });
+        setQuotas(prev => ({ ...prev, ...newQuotas }));
       }
+    } catch {
+      providerNames.forEach(p => setQuotas(prev => ({ ...prev, [p]: { error: 'Impossible de contacter l\'API' } })));
+    } finally {
+      providerNames.forEach(p => setLoadingQuotas(prev => ({ ...prev, [p]: false })));
     }
   }, [user]);
 
