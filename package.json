@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "dev:full": "concurrently \"vite\" \"node scripts/dev-api.js\"",
+    "setup:service-account": "node scripts/setup-service-account.js",
     "build": "vite build",
     "lint": "eslint .",
     "test": "vitest run",

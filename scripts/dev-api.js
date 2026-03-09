@@ -27,7 +27,7 @@ console.error = (...args) => {
   originalError(...args)
 }
 
-const PORT = 3000
+const PORT = Number(process.env.PORT) || 3001
 
 function patchRes(res) {
   res.status = (code) => { res.statusCode = code; return res }
@@ -55,16 +55,46 @@ const server = createServer(async (req, res) => {
   const funcName = pathname.replace('/api/', '').replace(/\/$/, '') || 'index'
   const funcPath = join(process.cwd(), 'api', `${funcName}.js`)
 
-  try {
-    const mod = await import(pathToFileURL(funcPath).href + '?t=' + Date.now())
-    await mod.default(req, patchRes(res))
-  } catch (e) {
-    console.error(`[SERVER ERROR] ${e.stack}`)
-    res.writeHead(500, { 'Content-Type': 'application/json' })
-    res.end(JSON.stringify({ error: e.message, stack: e.stack }))
+  async function runHandler() {
+    try {
+      const mod = await import(pathToFileURL(funcPath).href + '?t=' + Date.now())
+      const result = await mod.default(req, patchRes(res))
+      // Support Edge-style handlers that return a Response
+      if (result && typeof result.status === 'number') {
+        res.statusCode = result.status
+        result.headers?.forEach((v, k) => res.setHeader(k, v))
+        const body = await result.text()
+        res.end(body)
+      }
+    } catch (e) {
+      console.error(`[SERVER ERROR] ${e.stack}`)
+      res.writeHead(500, { 'Content-Type': 'application/json' })
+      res.end(JSON.stringify({ error: e.message, stack: e.stack }))
+    }
+  }
+
+  const isJsonPost = (req.method === 'POST' || req.method === 'PUT') && req.headers['content-type']?.includes('application/json')
+  if (isJsonPost) {
+    const chunks = []
+    req.on('data', (chunk) => chunks.push(chunk))
+    req.on('end', () => {
+      try {
+        req.body = JSON.parse(Buffer.concat(chunks).toString('utf8'))
+      } catch {
+        req.body = {}
+      }
+      runHandler()
+    })
+    req.on('error', () => {
+      req.body = {}
+      runHandler()
+    })
+  } else {
+    req.body = {}
+    runHandler()
   }
 })
 
 server.listen(PORT, () => {
-  console.log(`API dev server → http://localhost:${PORT}/svc`)
+  console.log(`API dev server → http://localhost:${PORT}/api`)
 })

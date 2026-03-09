@@ -3,8 +3,8 @@ export const config = {
 };
 
 export default function handler(req) {
-  const origin = req.headers.get('origin');
-  const allowedOrigins = ['https://quota-alert-ai-jv.web.app', 'https://quota-alert-ai-jv.firebaseapp.com', 'http://localhost:5173'];
+  const origin = req.headers?.get?.('origin') ?? req.headers?.origin;
+  const allowedOrigins = ['https://quota-alert-ai-jv.web.app', 'https://quota-alert-ai-jv.firebaseapp.com', 'http://localhost:5173', 'http://localhost:5174', 'http://localhost:5175', 'http://localhost:5176'];
   
   const headers = { 'Content-Type': 'application/json' };
   if (origin && allowedOrigins.includes(origin)) {

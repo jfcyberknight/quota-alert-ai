@@ -263,6 +263,8 @@ function Dashboard({ user }) {
         const newQuotas = {};
         data.results.forEach(r => { newQuotas[r.provider] = r; });
         setQuotas(prev => ({ ...prev, ...newQuotas }));
+      } else if (!res.ok && data.error) {
+        providerNames.forEach(p => setQuotas(prev => ({ ...prev, [p]: { provider: p, error: data.error } })));
       }
     } catch {
       providerNames.forEach(p => setQuotas(prev => ({ ...prev, [p]: { error: 'Impossible de contacter l\'API' } })));
