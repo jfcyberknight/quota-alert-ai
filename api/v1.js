@@ -52,18 +52,14 @@ export default async function handler(req, res) {
     const decodedToken = await auth.verifyIdToken(token);
     const userId = decodedToken.uid;
 
-    // Vercel auto-parses req.body for application/json
-    let providers;
-    if (req.body && (req.body.ps || req.body.p)) {
-      providers = req.body.ps || [req.body.p];
-    } else {
-      let body = '';
-      await new Promise(resolve => { req.on('data', c => body += c); req.on('end', resolve); });
-      const parsed = JSON.parse(body || '{}');
-      providers = parsed.ps || [parsed.p];
-    }
+    // Vercel auto-parses req.body for application/json. 
+    // Manual parsing is removed to prevent hangs on already consumed streams.
+    const providers = req.body?.ps || (req.body?.p ? [req.body.p] : null);
 
-    if (!providers || providers.length === 0) return res.status(400).json({ error: 'Provider(s) missing' });
+    if (!providers || providers.length === 0) {
+      console.warn('[API] Missing providers in body:', req.body);
+      return res.status(400).json({ error: 'Provider(s) missing in request body' });
+    }
 
     // Récupérer toutes les clés de l'utilisateur en un seul appel Firestore (Optimization)
     const keysSnap = await db.collection('apiKeys').where('userId', '==', userId).get();
