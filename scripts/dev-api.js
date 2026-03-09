@@ -46,13 +46,13 @@ const server = createServer(async (req, res) => {
 
   console.log(`[API] ${req.method} ${pathname}`)
 
-  if (!pathname.startsWith('/svc/')) {
+  if (!pathname.startsWith('/api/')) {
     res.writeHead(404)
     res.end('Not found')
     return
   }
 
-  const funcName = pathname.replace('/svc/', '').replace(/\/$/, '') || 'index'
+  const funcName = pathname.replace('/api/', '').replace(/\/$/, '') || 'index'
   const funcPath = join(process.cwd(), 'api', `${funcName}.js`)
 
   try {

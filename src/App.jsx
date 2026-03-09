@@ -242,7 +242,7 @@ function Dashboard({ user }) {
       setLoadingQuotas(prev => ({ ...prev, [providerName]: true }));
       try {
         const idToken = await user.getIdToken();
-        const res = await fetch('/svc/v1', {
+        const res = await fetch('/api/v1', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
           body: JSON.stringify({ p: providerName }),
@@ -350,7 +350,7 @@ function App() {
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (u) => { setUser(u); setLoading(false); });
-    fetch('/svc/ping')
+    fetch('/api/ping')
       .then(r => r.json())
       .then(d => setBackendStatus(d.message))
       .catch(() => setBackendStatus('Erreur de connexion au backend'));
