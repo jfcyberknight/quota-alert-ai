@@ -3,47 +3,25 @@ import { getFirestore } from 'firebase-admin/firestore';
 import { getAuth } from 'firebase-admin/auth';
 
 function initFirebase() {
-  console.log('[API] initFirebase started');
-  if (getApps().length > 0) {
-    console.log('[API] Using existing app');
-    return { db: getFirestore(), auth: getAuth() };
-  }
+  if (getApps().length > 0) return { db: getFirestore(), auth: getAuth() };
   let saData = process.env.FIREBASE_SERVICE_ACCOUNT;
-  if (!saData) {
-    console.error('[API] Variable FIREBASE_SERVICE_ACCOUNT manquante');
-    throw new Error('Variable FIREBASE_SERVICE_ACCOUNT manquante');
-  }
+  if (!saData) throw new Error('FIREBASE_SERVICE_ACCOUNT missing');
   
-  console.log('[API] FIREBASE_SERVICE_ACCOUNT length:', saData.length);
-  // Vercel env vars can sometimes be wrapped in extra quotes
   if ((saData.startsWith('"') && saData.endsWith('"')) || (saData.startsWith("'") && saData.endsWith("'"))) {
-    console.log('[API] Stripping quotes from saData');
     saData = saData.slice(1, -1);
   }
   
+  let sa;
   try {
-    const sa = JSON.parse(saData);
-    console.log('[API] SA JSON parsed, client_email:', sa.client_email || 'MISSING');
-    console.log('[API] SA project_id:', sa.project_id || 'MISSING');
-    
-    if (!sa.project_id || !sa.private_key || !sa.client_email) {
-      console.error('[API] Service account missing essential fields');
-      throw new Error('Service account missing essential fields (project_id, private_key, or client_email)');
-    }
-
-    // Ensure private key handles newlines correctly
-    if (sa.private_key) {
-       console.log('[API] Normalizing private key (exists, length:', sa.private_key.length, ')');
-       sa.private_key = sa.private_key.replace(/\\n/g, '\n');
-    }
-    
-    const app = initializeApp({ credential: cert(sa) });
-    console.log('[API] Firebase initialized');
-    return { db: getFirestore(app), auth: getAuth(app) };
+    sa = JSON.parse(saData);
   } catch (err) {
-    console.error('[API] Failed to parse/init Firebase SA:', err.message);
-    throw new Error(`Firebase init error: ${err.message}`);
+    throw new Error(`JSON parse error in FIREBASE_SERVICE_ACCOUNT: ${err.message}. Data starts with: ${saData.substring(0, 30)}`);
   }
+
+  if (sa.private_key) sa.private_key = sa.private_key.replace(/\\n/g, '\n');
+  
+  const app = initializeApp({ credential: cert(sa) });
+  return { db: getFirestore(app), auth: getAuth(app) };
 }
 
 export default async function handler(req, res) {
