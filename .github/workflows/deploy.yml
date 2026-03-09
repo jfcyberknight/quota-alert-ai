@@ -42,17 +42,17 @@ jobs:
           VITE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
           VITE_VAPID_PUB: ${{ secrets.VITE_VAPID_PUBLIC_KEY }}
         run: |
-          echo "$SA_JSON" | npx vercel env add FIREBASE_SERVICE_ACCOUNT production --token=$VERCEL_TOKEN --force
-          echo "$VAPID_PUB" | npx vercel env add VAPID_PUBLIC_KEY production --token=$VERCEL_TOKEN --force
-          echo "$VAPID_PRIV" | npx vercel env add VAPID_PRIVATE_KEY production --token=$VERCEL_TOKEN --force
-          echo "$CRON_SEC" | npx vercel env add CRON_SECRET production --token=$VERCEL_TOKEN --force
-          echo "$VITE_API_KEY" | npx vercel env add VITE_FIREBASE_API_KEY production --token=$VERCEL_TOKEN --force
-          echo "$VITE_AUTH_DOMAIN" | npx vercel env add VITE_FIREBASE_AUTH_DOMAIN production --token=$VERCEL_TOKEN --force
-          echo "$VITE_PROJ_ID" | npx vercel env add VITE_FIREBASE_PROJECT_ID production --token=$VERCEL_TOKEN --force
-          echo "$VITE_STORAGE" | npx vercel env add VITE_FIREBASE_STORAGE_BUCKET production --token=$VERCEL_TOKEN --force
-          echo "$VITE_SENDER" | npx vercel env add VITE_FIREBASE_MESSAGING_SENDER_ID production --token=$VERCEL_TOKEN --force
-          echo "$VITE_APP_ID" | npx vercel env add VITE_FIREBASE_APP_ID production --token=$VERCEL_TOKEN --force
-          echo "$VITE_VAPID_PUB" | npx vercel env add VITE_VAPID_PUBLIC_KEY production --token=$VERCEL_TOKEN --force
+          printf %s "$SA_JSON" | npx vercel env add FIREBASE_SERVICE_ACCOUNT production --token=$VERCEL_TOKEN --force
+          printf %s "$VAPID_PUB" | npx vercel env add VAPID_PUBLIC_KEY production --token=$VERCEL_TOKEN --force
+          printf %s "$VAPID_PRIV" | npx vercel env add VAPID_PRIVATE_KEY production --token=$VERCEL_TOKEN --force
+          printf %s "$CRON_SEC" | npx vercel env add CRON_SECRET production --token=$VERCEL_TOKEN --force
+          printf %s "$VITE_API_KEY" | npx vercel env add VITE_FIREBASE_API_KEY production --token=$VERCEL_TOKEN --force
+          printf %s "$VITE_AUTH_DOMAIN" | npx vercel env add VITE_FIREBASE_AUTH_DOMAIN production --token=$VERCEL_TOKEN --force
+          printf %s "$VITE_PROJ_ID" | npx vercel env add VITE_FIREBASE_PROJECT_ID production --token=$VERCEL_TOKEN --force
+          printf %s "$VITE_STORAGE" | npx vercel env add VITE_FIREBASE_STORAGE_BUCKET production --token=$VERCEL_TOKEN --force
+          printf %s "$VITE_SENDER" | npx vercel env add VITE_FIREBASE_MESSAGING_SENDER_ID production --token=$VERCEL_TOKEN --force
+          printf %s "$VITE_APP_ID" | npx vercel env add VITE_FIREBASE_APP_ID production --token=$VERCEL_TOKEN --force
+          printf %s "$VITE_VAPID_PUB" | npx vercel env add VITE_VAPID_PUBLIC_KEY production --token=$VERCEL_TOKEN --force
 
 
       - name: Deploy to Vercel
