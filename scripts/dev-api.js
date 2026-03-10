@@ -4,10 +4,11 @@ import { join, dirname } from 'path'
 import fs from 'fs'
 import dotenv from 'dotenv'
 
-dotenv.config({ path: '.env.local' })
-
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
+const projectRoot = join(__dirname, '..')
+dotenv.config({ path: join(projectRoot, '.env.local'), override: true })
+
 const logFile = join(__dirname, 'api_debug.log')
 
 function logToFile(msg) {
@@ -27,7 +28,7 @@ console.error = (...args) => {
   originalError(...args)
 }
 
-const PORT = Number(process.env.PORT) || 3001
+const PORT = Number(process.env.PORT) || 3967
 
 function patchRes(res) {
   res.status = (code) => { res.statusCode = code; return res }
@@ -97,4 +98,8 @@ const server = createServer(async (req, res) => {
 
 server.listen(PORT, () => {
   console.log(`API dev server → http://localhost:${PORT}/api`)
+}).on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(`Port ${PORT} déjà utilisé. Lance avec: PORT=${PORT + 1} API_PORT=${PORT + 1} npm run dev:full`)
+  }
 })

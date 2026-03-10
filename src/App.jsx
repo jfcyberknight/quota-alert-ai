@@ -1,4 +1,4 @@
-import React, { useState, useEffect, Suspense, lazy, memo } from 'react';
+import React, { useState, useEffect, useRef, useCallback, Suspense, lazy, memo } from 'react';
 import { Routes, Route, Navigate, Link } from 'react-router-dom';
 import Layout from './components/Layout';
 import Navbar from './components/Navbar';
@@ -93,18 +93,49 @@ const QuotaCard = memo(({ provider, quota, loading, onRefresh }) => {
   const statusClass = status === 'Critical' ? 'text-red-500' : status === 'Warning' ? 'text-amber-400' : 'text-green-500';
 
   const formatResetTime = (iso) => {
-    if (!iso) return '-';
-    return new Date(iso).toLocaleString();
+    if (!iso) return '—';
+    try {
+      const d = new Date(iso);
+      if (Number.isNaN(d.getTime())) return '—';
+      const today = new Date();
+      const isToday = d.toDateString() === today.toDateString();
+      const timeStr = d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      if (isToday) return `Aujourd'hui ${timeStr}`;
+      return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' }) + ' ' + timeStr;
+    } catch {
+      return '—';
+    }
   };
 
   const formatResetIn = (iso) => {
-    if (!iso) return '-';
-    const diff = new Date(iso) - new Date();
-    if (diff <= 0) return 'Prêt';
-    const hours = Math.floor(diff / 3600000);
-    const mins = Math.floor((diff % 3600000) / 60000);
-    return `${hours}h ${mins}m`;
+    if (!iso) return '—';
+    try {
+      const d = new Date(iso);
+      if (Number.isNaN(d.getTime())) return '—';
+      const diff = d.getTime() - Date.now();
+      if (diff <= 0) return 'Prêt';
+      const hours = Math.floor(diff / 3600000);
+      const mins = Math.floor((diff % 3600000) / 60000);
+      if (hours === 0 && mins === 0) return '< 1 min';
+      return `${hours}h ${mins}m`;
+    } catch {
+      return '—';
+    }
   };
+
+  const remainingLabel = hasQuota && typeof quota.limit === 'number' && quota.limit > 0
+    ? (() => {
+        const used = Number(quota.used);
+        const limit = Number(quota.limit);
+        if (Number.isNaN(limit)) return null;
+        const rem = Math.max(0, limit - (Number.isNaN(used) ? 0 : used));
+        const u = (quota.unit || '').toUpperCase();
+        if (u === 'USD') return `$${rem.toFixed(2)} restant`;
+        if (u === 'RPM') return `${rem} requêtes/min restantes`;
+        if (u === 'TOKENS') return `${rem} tokens restants`;
+        return `${rem} ${quota.unit || ''}`;
+      })()
+    : null;
 
   return (
     <div className={`relative p-5 md:p-6 rounded-2xl bg-[#161b22] border transition-all duration-300 ${loading ? 'border-white/5 opacity-70' : hasQuota ? 'border-blue-500/30 shadow-[0_0_30px_rgba(59,130,246,0.05)]' : 'border-white/5'}`}>
@@ -158,14 +189,30 @@ const QuotaCard = memo(({ provider, quota, loading, onRefresh }) => {
             {loading ? 'LOADING' : hasQuota ? status.toUpperCase() : 'OFFLINE'}
           </span>
         </div>
+        {remainingLabel != null && (
+          <div className="flex justify-between items-center text-xs md:text-sm">
+            <span className="text-gray-500">Disponible</span>
+            <span className="font-semibold text-gray-300">{remainingLabel}</span>
+          </div>
+        )}
         <div className="flex justify-between items-center text-xs md:text-sm">
-          <span className="text-gray-500">Reset In</span>
-          <span className="font-semibold text-gray-300">{hasQuota ? formatResetIn(quota.resetTime) : '-'}</span>
+          <span className="text-gray-500">Temps avant reset</span>
+          <span className="font-semibold text-gray-300">{hasQuota ? formatResetIn(quota.resetTime) : '—'}</span>
         </div>
         <div className="flex justify-between items-center text-xs md:text-sm">
-          <span className="text-gray-500">Reset Time</span>
-          <span className="text-[10px] md:text-xs text-gray-400">{hasQuota ? formatResetTime(quota.resetTime) : '-'}</span>
+          <span className="text-gray-500">Heure de reset</span>
+          <span className="text-[10px] md:text-xs text-gray-400 font-medium">{hasQuota ? formatResetTime(quota.resetTime) : '—'}</span>
         </div>
+        {status === 'Critical' && quota.resetTime && (
+          <p className="text-[10px] text-amber-400/90 mt-2 pt-2 border-t border-white/5">
+            Rafraîchir après le reset pour mettre à jour (évite de consommer le quota).
+          </p>
+        )}
+        {hasQuota && quota.statsUnavailableReason && (
+          <p className="text-[10px] text-gray-500 mt-2 pt-2 border-t border-white/5 leading-relaxed">
+            {quota.statsUnavailableReason}
+          </p>
+        )}
       </div>
 
       {hasQuota && quota.models && (
@@ -238,8 +285,10 @@ function Dashboard({ user }) {
   const [quotas, setQuotas] = useState({});
   const [loadingKeys, setLoadingKeys] = useState(true);
   const [loadingQuotas, setLoadingQuotas] = useState({});
+  const keysRef = useRef([]);
+  keysRef.current = keys;
 
-  const fetchQuotas = React.useCallback(async (keysList) => {
+  const fetchQuotas = useCallback(async (keysList) => {
     if (keysList.length === 0) return;
     
     // Grouper tous les noms de providers configurés
@@ -257,16 +306,27 @@ function Dashboard({ user }) {
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
         body: JSON.stringify({ ps: providerNames }), // Utilisation du nouveau mode batch "ps"
       });
-      
-      const data = await res.json();
-      if (data.results) {
-        const newQuotas = {};
-        data.results.forEach(r => { newQuotas[r.provider] = r; });
-        setQuotas(prev => ({ ...prev, ...newQuotas }));
-      } else if (!res.ok && data.error) {
-        providerNames.forEach(p => setQuotas(prev => ({ ...prev, [p]: { provider: p, error: data.error } })));
+
+      const raw = await res.text();
+      let data;
+      try {
+        data = raw ? JSON.parse(raw) : {};
+      } catch {
+        console.warn('[API] Réponse non-JSON:', raw?.slice(0, 200));
+        data = { error: 'Réponse invalide du serveur' };
       }
-    } catch {
+
+      if (!res.ok) {
+        const msg = data?.error || res.statusText || `Erreur ${res.status}`;
+        providerNames.forEach(p => setQuotas(prev => ({ ...prev, [p]: { provider: p, error: msg } })));
+      } else {
+        const list = Array.isArray(data?.results) ? data.results : (data?.provider ? [data] : []);
+        const newQuotas = {};
+        list.forEach(r => { if (r?.provider) newQuotas[r.provider] = r; });
+        if (Object.keys(newQuotas).length) setQuotas(prev => ({ ...prev, ...newQuotas }));
+      }
+    } catch (e) {
+      console.warn('[API] fetchQuotas:', e);
       providerNames.forEach(p => setQuotas(prev => ({ ...prev, [p]: { error: 'Impossible de contacter l\'API' } })));
     } finally {
       providerNames.forEach(p => setLoadingQuotas(prev => ({ ...prev, [p]: false })));
@@ -289,6 +349,21 @@ function Dashboard({ user }) {
     }
     fetchKeys();
   }, [user.uid, fetchQuotas]);
+
+  // Rafraîchissement auto après l'heure de reset (ex. Gemini 429)
+  useEffect(() => {
+    const futureResets = Object.values(quotas)
+      .filter(q => q?.resetTime && !q.error)
+      .map(q => new Date(q.resetTime).getTime())
+      .filter(t => t > Date.now());
+    if (futureResets.length === 0) return;
+    const nextReset = Math.min(...futureResets);
+    const delay = Math.max(2000, nextReset - Date.now() + 2000);
+    const t = setTimeout(() => {
+      if (keysRef.current.length) fetchQuotas(keysRef.current);
+    }, delay);
+    return () => clearTimeout(t);
+  }, [quotas, fetchQuotas]);
 
   const { status: pushStatus, subscribe, unsubscribe } = usePushNotifications(user);
   const configuredProviders = new Set(keys.map(k => k.provider));

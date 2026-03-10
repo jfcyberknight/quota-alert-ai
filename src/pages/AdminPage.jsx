@@ -73,11 +73,11 @@ function GuideSection() {
   );
 }
 
-const STATS = [
-  { label: 'Utilisateurs',     value: '1',  sub: 'inscrits',    color: 'text-blue-400' },
-  { label: 'Quotas surveillés', value: '0', sub: 'actifs',      color: 'text-purple-400' },
-  { label: 'Alertes envoyées', value: '0',  sub: 'ce mois',     color: 'text-amber-400' },
-  { label: 'Appels API',       value: '—',  sub: "aujourd'hui", color: 'text-green-500' },
+const STATS_CONFIG = [
+  { key: 'users',            label: 'Utilisateurs',      sub: 'inscrits',    color: 'text-blue-400' },
+  { key: 'quotasMonitored',  label: 'Quotas surveillés', sub: 'actifs',     color: 'text-purple-400' },
+  { key: 'alertsSent',       label: 'Alertes envoyées',  sub: 'ce mois',    color: 'text-amber-400' },
+  { key: 'apiCallsToday',    label: 'Appels API',        sub: "aujourd'hui", color: 'text-green-500' },
 ];
 
 const SECTIONS = ['Vue générale', 'Utilisateurs', 'API Keys', 'Alertes', 'Système'];
@@ -339,8 +339,43 @@ function ApiKeysSection({ user }) {
   );
 }
 
+const API_BASE = typeof window !== 'undefined' && window.location?.hostname === 'localhost' ? '' : 'https://quota-alert-ai.vercel.app';
+
 export default function AdminPage({ user }) {
   const [section, setSection] = useState('API Keys');
+  const [stats, setStats] = useState(null);
+  const [statsLoading, setStatsLoading] = useState(false);
+  const [statsError, setStatsError] = useState(null);
+
+  useEffect(() => {
+    if (section !== 'Vue générale' || !user) return;
+    let cancelled = false;
+    setStatsError(null);
+    setStatsLoading(true);
+    (async () => {
+      try {
+        const idToken = await user.getIdToken();
+        const res = await fetch(`${API_BASE}/api/stats`, {
+          method: 'GET',
+          headers: { 'Authorization': `Bearer ${idToken}` },
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data.error || `Erreur ${res.status}`);
+        }
+        const data = await res.json();
+        if (!cancelled) setStats(data);
+      } catch (e) {
+        if (!cancelled) {
+          setStatsError(e.message);
+          setStats(null);
+        }
+      } finally {
+        if (!cancelled) setStatsLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [section, user]);
 
   return (
     <div className="flex flex-col md:flex-row min-h-[calc(100vh-76px)]">
@@ -382,16 +417,27 @@ export default function AdminPage({ user }) {
 
         {section === 'Vue générale' && (
           <div className="animate-in fade-in duration-300">
+            {statsError && (
+              <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
+                Impossible de charger les statistiques : {statsError}
+              </div>
+            )}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-8 md:mb-10">
-              {STATS.map(s => (
-                <div key={s.label} className="p-4 md:p-6 bg-white/5 border border-white/10 rounded-2xl flex flex-col justify-between">
-                  <div className={`text-3xl md:text-4xl font-extrabold leading-none mb-3 ${s.color}`}>{s.value}</div>
-                  <div>
-                    <div className="text-xs md:text-sm font-semibold text-gray-300">{s.label}</div>
-                    <div className="text-[10px] md:text-xs text-gray-500 mt-1">{s.sub}</div>
+              {STATS_CONFIG.map(s => {
+                const raw = stats ? stats[s.key] : undefined;
+                const value = statsLoading && stats == null
+                  ? '…'
+                  : (raw === undefined || raw === null ? '—' : String(raw));
+                return (
+                  <div key={s.key} className="p-4 md:p-6 bg-white/5 border border-white/10 rounded-2xl flex flex-col justify-between">
+                    <div className={`text-3xl md:text-4xl font-extrabold leading-none mb-3 ${s.color}`}>{value}</div>
+                    <div>
+                      <div className="text-xs md:text-sm font-semibold text-gray-300">{s.label}</div>
+                      <div className="text-[10px] md:text-xs text-gray-500 mt-1">{s.sub}</div>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
             
             <div className="p-5 md:p-8 bg-white/5 border border-white/10 rounded-2xl">

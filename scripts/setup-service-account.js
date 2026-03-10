@@ -7,7 +7,7 @@
  *   node scripts/setup-service-account.js chemin.json  # Lit le JSON et met à jour .env.local
  */
 
-import { readFileSync, readFile, writeFile, unlinkSync } from 'fs';
+import { readFileSync, readFile, writeFile, writeFileSync, unlinkSync } from 'fs';
 import { join } from 'path';
 import { execSync } from 'child_process';
 
@@ -110,10 +110,10 @@ Projet Firebase introuvable.
   // 1) Tenter gcloud pour créer la clé
   if (tryGcloudCreateKey(projectId, keyFile)) {
     console.log('Clé créée avec gcloud. Ajout à .env.local...');
-    const jsonString = readFileSync(keyFile, 'utf8').replace(/\r/g, '');
-    const oneLine = jsonString.replace(/\n/g, '\\n');
-    const escaped = oneLine.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
-    const line = `FIREBASE_SERVICE_ACCOUNT="${escaped}"`;
+    const parsed = JSON.parse(readFileSync(keyFile, 'utf8').replace(/\r/g, ''));
+    const targetFile = join(process.cwd(), 'service-account.json');
+    writeFileSync(targetFile, JSON.stringify(parsed, null, 2), 'utf8');
+    const line = 'FIREBASE_SERVICE_ACCOUNT=./service-account.json';
     addToEnvLocal(line)
       .then(() => {
         console.log('FIREBASE_SERVICE_ACCOUNT a été ajouté dans .env.local');
@@ -141,24 +141,24 @@ Projet Firebase introuvable.
   }
 }
 
-// --- Avec argument : fichier JSON fourni → mise à jour .env.local
+// --- Avec argument : fichier JSON fourni → copie en service-account.json + env pointe dessus
 if (keyPath) {
-  let jsonString;
+  let parsed;
   try {
-    jsonString = readFileSync(keyPath, 'utf8').replace(/\r/g, '');
-    JSON.parse(jsonString);
+    const jsonString = readFileSync(keyPath, 'utf8').replace(/\r/g, '');
+    parsed = JSON.parse(jsonString);
   } catch (e) {
     console.error('Fichier invalide ou introuvable:', keyPath, e.message);
     process.exit(1);
   }
 
-  const oneLine = jsonString.replace(/\n/g, '\\n');
-  const escaped = oneLine.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
-  const line = `FIREBASE_SERVICE_ACCOUNT="${escaped}"`;
+  const targetFile = join(process.cwd(), 'service-account.json');
+  writeFileSync(targetFile, JSON.stringify(parsed, null, 2), 'utf8');
+  const line = 'FIREBASE_SERVICE_ACCOUNT=./service-account.json';
 
   addToEnvLocal(line)
     .then(() => {
-      console.log('FIREBASE_SERVICE_ACCOUNT a été ajouté/mis à jour dans .env.local');
+      console.log('service-account.json créé, FIREBASE_SERVICE_ACCOUNT=./service-account.json dans .env.local');
     })
     .catch((e) => {
       console.error('Erreur écriture .env.local:', e.message);

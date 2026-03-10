@@ -1,3 +1,5 @@
+import { readFileSync } from 'fs';
+import { join } from 'path';
 import { initializeApp, cert, getApps } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 import { getAuth } from 'firebase-admin/auth';
@@ -5,6 +7,42 @@ import { getOpenAIQuota, getGeminiQuota, getAnthropicQuota } from './_lib/extrac
 
 // Cache global pour réutiliser les instances entre les appels (Backend Efficiency)
 let db, auth;
+
+// Cache des réponses 429 Gemini par userId pour éviter de rappeler l'API à chaque refresh
+const gemini429Cache = new Map();
+
+function loadServiceAccount() {
+  let saData = process.env.FIREBASE_SERVICE_ACCOUNT;
+  if (!saData) throw new Error('FIREBASE_SERVICE_ACCOUNT missing');
+  saData = saData.replace(/^\uFEFF/, '').trim();
+
+  let raw;
+  if (saData.startsWith('{')) {
+    raw = saData;
+  } else {
+    const path = saData.startsWith('/') || /^[A-Za-z]:\\/.test(saData) ? saData : join(process.cwd(), saData);
+    try {
+      raw = readFileSync(path, 'utf8');
+    } catch (e) {
+      throw new Error('FIREBASE_SERVICE_ACCOUNT file not found: ' + saData);
+    }
+  }
+
+  if ((raw.startsWith('"') && raw.endsWith('"')) || (raw.startsWith("'") && raw.endsWith("'"))) {
+    raw = raw.slice(1, -1);
+  }
+  raw = raw.replace(/\\"/g, '"');
+  let sa;
+  try {
+    sa = JSON.parse(raw);
+  } catch (e) {
+    throw new Error('FIREBASE_SERVICE_ACCOUNT invalid JSON: ' + e.message);
+  }
+  if (sa.private_key && typeof sa.private_key === 'string') {
+    sa.private_key = sa.private_key.replace(/\\n/g, '\n');
+  }
+  return sa;
+}
 
 function initFirebase() {
   if (db && auth) return { db, auth };
@@ -15,16 +53,7 @@ function initFirebase() {
     return { db, auth };
   }
 
-  let saData = process.env.FIREBASE_SERVICE_ACCOUNT;
-  if (!saData) throw new Error('FIREBASE_SERVICE_ACCOUNT missing');
-  
-  if ((saData.startsWith('"') && saData.endsWith('"')) || (saData.startsWith("'") && saData.endsWith("'"))) {
-    saData = saData.slice(1, -1);
-  }
-  
-  const sa = JSON.parse(saData);
-  if (sa.private_key) sa.private_key = sa.private_key.replace(/\\n/g, '\n');
-  
+  const sa = loadServiceAccount();
   const app = initializeApp({ credential: cert(sa) });
   db = getFirestore(app);
   auth = getAuth(app);
@@ -74,9 +103,20 @@ export default async function handler(req, res) {
       const apiKey = userKeys[p.toLowerCase()];
       if (!apiKey) return { provider: p, error: 'Clé non trouvée' };
 
+      if (p === 'Gemini') {
+        const cached = gemini429Cache.get(userId);
+        if (cached && Date.now() < cached.expiry) return cached.result;
+        const result = await getGeminiQuota(apiKey);
+        if (result.percent === 100 && result.resetTime) {
+          const expiry = new Date(result.resetTime).getTime();
+          gemini429Cache.set(userId, { result, expiry });
+        } else {
+          gemini429Cache.delete(userId);
+        }
+        return result;
+      }
       if (p === 'OpenAI') return await getOpenAIQuota(apiKey);
       if (p === 'Anthropic') return await getAnthropicQuota(apiKey);
-      if (p === 'Gemini') return await getGeminiQuota(apiKey);
       return { provider: p, error: 'Unknown provider' };
     }));
 
